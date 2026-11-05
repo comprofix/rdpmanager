@@ -256,6 +256,25 @@ public sealed class SessionTabTests : IDisposable
     }
 
     [Fact]
+    public async Task CtrlAltBreak_RequestsFullScreenAndLeavesItAgain()
+    {
+        await SetUpAsync();
+        var (tab, session) = Connect();
+        session.RaiseConnected();
+        int enter = 0, leave = 0;
+        tab.FullScreenRequested += (_, _) => enter++;
+        tab.ExitFullScreenRequested += (_, _) => leave++;
+
+        session.RaiseGoFullScreen();
+        tab.Location = SessionLocation.FullScreen;
+        session.RaiseGoFullScreen(); // Already full screen: ignored.
+        session.RaiseLeaveFullScreen();
+
+        Assert.Equal(1, enter);
+        Assert.Equal(1, leave);
+    }
+
+    [Fact]
     public async Task Settings_FromTheErrorPanel_OpensTheConnectionsSettings()
     {
         await SetUpAsync();

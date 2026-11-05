@@ -13,7 +13,10 @@ public interface IRemoteSession
 
     event EventHandler<DisconnectReport>? Disconnected;
 
-    /// <summary>The session asks to leave full screen (for example its own shortcut).</summary>
+    /// <summary>The session asks to go full screen (Ctrl+Alt+Break, mstsc's shortcut).</summary>
+    event EventHandler? GoFullScreenRequested;
+
+    /// <summary>The session asks to leave full screen (Ctrl+Alt+Break again, or its own request).</summary>
     event EventHandler? LeaveFullScreenRequested;
 
     /// <summary>The session asks its window to minimise.</summary>

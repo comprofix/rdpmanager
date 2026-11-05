@@ -140,6 +140,7 @@ public sealed partial class SessionTabViewModel : TabViewModel, IDisposeWinForms
         _session = session;
         session.Connected += (_, _) => OnConnected();
         session.Disconnected += (_, report) => OnDisconnected(report);
+        session.GoFullScreenRequested += (_, _) => FullScreen();
         session.LeaveFullScreenRequested += (_, _) => ExitFullScreenRequested?.Invoke(this, EventArgs.Empty);
         session.MinimizeRequested += (_, _) => MinimizeRequested?.Invoke(this, EventArgs.Empty);
 

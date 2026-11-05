@@ -27,9 +27,45 @@ internal sealed class RdpRemoteSession : IRemoteSession
             if (control.RdpClient is { } client)
             {
                 client.KeyboardHookMode = KeyboardHookFullScreenOnly;
+                SubscribeGoFullScreen(client);
             }
         };
     }
+
+    /// <summary>
+    /// In container-handled full screen, Microsoft's control raises OnRequestGoFullScreen for Ctrl+Alt+Break.
+    /// The wrapper does not forward it, so subscribe on the underlying ActiveX client by name.
+    /// </summary>
+    private void SubscribeGoFullScreen(object client)
+    {
+        if (_goFullScreenSubscribed)
+        {
+            return;
+        }
+
+        var eventInfo = client.GetType().GetEvent("OnRequestGoFullScreen");
+        if (eventInfo?.EventHandlerType is not { } handlerType)
+        {
+            return;
+        }
+
+        var raise = GetType().GetMethod(nameof(OnRequestGoFullScreen), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        try
+        {
+            eventInfo.AddEventHandler(client, Delegate.CreateDelegate(handlerType, this, raise));
+            _goFullScreenSubscribed = true;
+        }
+        catch (ArgumentException)
+        {
+            // Unexpected delegate shape: Ctrl+Alt+Break simply won't go full screen.
+        }
+    }
+
+    private bool _goFullScreenSubscribed;
+
+    private void OnRequestGoFullScreen(object? sender, EventArgs e) => GoFullScreenRequested?.Invoke(this, EventArgs.Empty);
+
+    public event EventHandler? GoFullScreenRequested;
 
     public event EventHandler? Connected;
 

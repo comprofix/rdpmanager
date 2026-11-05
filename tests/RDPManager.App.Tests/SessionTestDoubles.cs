@@ -29,6 +29,8 @@ internal sealed class FakeRemoteSession : IRemoteSession
 
     public event EventHandler<DisconnectReport>? Disconnected;
 
+    public event EventHandler? GoFullScreenRequested;
+
     public event EventHandler? LeaveFullScreenRequested;
 
     public event EventHandler? MinimizeRequested;
@@ -55,6 +57,8 @@ internal sealed class FakeRemoteSession : IRemoteSession
         Disconnected?.Invoke(this, new DisconnectReport(code, extended, description, userInitiated));
 
     public void RaiseLeaveFullScreen() => LeaveFullScreenRequested?.Invoke(this, EventArgs.Empty);
+
+    public void RaiseGoFullScreen() => GoFullScreenRequested?.Invoke(this, EventArgs.Empty);
 
     public void RaiseMinimize() => MinimizeRequested?.Invoke(this, EventArgs.Empty);
 }
