@@ -37,6 +37,18 @@ public sealed record SettingDefinition
 
     public required SettingType Type { get; init; }
 
+    /// <summary>The label shown in the settings tab.</summary>
+    public required string Label { get; init; }
+
+    /// <summary>Readable labels for <see cref="Choices"/>, keyed by stored value. Values without a label show as-is.</summary>
+    public IReadOnlyDictionary<string, string> ChoiceLabels { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>Smallest allowed value for <see cref="SettingType.Number"/>.</summary>
+    public int? Minimum { get; init; }
+
+    /// <summary>Largest allowed value for <see cref="SettingType.Number"/>.</summary>
+    public int? Maximum { get; init; }
+
     /// <summary>Built-in default, used when nothing in the tree or file defaults sets a value.</summary>
     public JsonNode? Default { get; init; }
 
@@ -54,6 +66,9 @@ public sealed record SettingDefinition
     public bool AppliesTo(NodeType type) =>
         type == NodeType.Folder ? Scope.HasFlag(SettingScope.Folder) : Scope.HasFlag(SettingScope.Connection);
 
+    /// <summary>The readable label for a choice value.</summary>
+    public string ChoiceLabel(string value) => ChoiceLabels.TryGetValue(value, out var label) ? label : value;
+
     /// <summary>True when <paramref name="value"/> is valid for this setting.</summary>
     public bool IsValid(JsonNode? value)
     {
@@ -65,7 +80,7 @@ public sealed record SettingDefinition
         return Type switch
         {
             SettingType.Text => v.TryGetValue<string>(out _),
-            SettingType.Number => v.TryGetValue<int>(out _),
+            SettingType.Number => v.TryGetValue<int>(out var n) && (Minimum is null || n >= Minimum) && (Maximum is null || n <= Maximum),
             SettingType.Boolean or SettingType.Secret => v.TryGetValue<bool>(out _),
             SettingType.Choice => v.TryGetValue<string>(out var s) && Choices.Contains(s),
             _ => false,

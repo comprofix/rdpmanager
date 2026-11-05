@@ -61,6 +61,32 @@ public class SettingsSchemaTests
     }
 
     [Fact]
+    public void EverySetting_HasALabel_AndEveryChoiceAReadableLabel()
+    {
+        Assert.All(SettingsSchema.All, d => Assert.False(string.IsNullOrWhiteSpace(d.Label), d.Key));
+        Assert.All(
+            SettingsSchema.All.Where(d => d.Type == SettingType.Choice),
+            d => Assert.All(d.Choices, c => Assert.True(d.ChoiceLabels.ContainsKey(c), $"{d.Key}: {c}")));
+        Assert.Equal("Always, except for local addresses", SettingsSchema.Get("gateway.usage").ChoiceLabel("bypassLocal"));
+    }
+
+    [Fact]
+    public void Groups_All_MatchesTheSchemaOrder()
+    {
+        Assert.Equal(SettingsSchema.All.Select(d => d.Group).Distinct(), SettingsSchema.Groups.All);
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    [InlineData(65535, true)]
+    [InlineData(65536, false)]
+    public void Port_MustBeInRange(int port, bool valid)
+    {
+        Assert.Equal(valid, SettingsSchema.Get("port").IsValid(JsonValue.Create(port)));
+    }
+
+    [Fact]
     public void Get_ThrowsForUnknownKey()
     {
         Assert.Null(SettingsSchema.Find("nope"));
