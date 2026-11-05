@@ -1,0 +1,14 @@
+<Project>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Company>RDPManager</Company>
+    <Product>RDPManager</Product>
+    <Copyright>Copyright (c) 2026 Matthew McKinnon</Copyright>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+</Project>

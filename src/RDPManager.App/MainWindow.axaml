@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="RDPManager.App.MainWindow"
+        Title="RDPManager"
+        Width="1200" Height="760"
+        MinWidth="640" MinHeight="400"
+        WindowStartupLocation="CenterScreen">
+  <!-- Placeholder layout: tree on the left, tabs on the right (see DESIGN.md, Agreed layout). -->
+  <Grid ColumnDefinitions="250,Auto,*">
+    <Border Grid.Column="0" Padding="12">
+      <TextBlock Text="Connections" Opacity="0.6" />
+    </Border>
+    <GridSplitter Grid.Column="1" Width="1" ResizeDirection="Columns" />
+    <Border Grid.Column="2" Padding="12">
+      <TextBlock Text="Sessions" Opacity="0.6" />
+    </Border>
+  </Grid>
+</Window>

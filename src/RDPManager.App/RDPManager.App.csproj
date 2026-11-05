@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>RDPManager</AssemblyName>
+    <RootNamespace>RDPManager.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RDPManager.Core\RDPManager.Core.csproj" />
+  </ItemGroup>
+
+</Project>
