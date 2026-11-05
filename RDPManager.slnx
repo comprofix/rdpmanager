@@ -4,6 +4,7 @@
     <Project Path="src/RDPManager.Core/RDPManager.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/RDPManager.App.Tests/RDPManager.App.Tests.csproj" />
     <Project Path="tests/RDPManager.Core.Tests/RDPManager.Core.Tests.csproj" />
   </Folder>
 </Solution>

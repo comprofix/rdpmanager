@@ -1,18 +1,78 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RDPManager.App.ViewModels"
         x:Class="RDPManager.App.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
         Title="RDPManager"
         Width="1200" Height="760"
         MinWidth="640" MinHeight="400"
         WindowStartupLocation="CenterScreen">
-  <!-- Placeholder layout: tree on the left, tabs on the right (see DESIGN.md, Agreed layout). -->
-  <Grid ColumnDefinitions="250,Auto,*">
-    <Border Grid.Column="0" Padding="12">
-      <TextBlock Text="Connections" Opacity="0.6" />
+  <!-- Layout: DESIGN.md, Agreed layout. The menu bar is completed in milestone 9. -->
+  <DockPanel>
+    <Menu DockPanel.Dock="Top">
+      <MenuItem Header="_File">
+        <MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
+      </MenuItem>
+    </Menu>
+
+    <Border DockPanel.Dock="Bottom" Padding="10,3" BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Text="" Opacity="0.7" />
+        <TextBlock Grid.Column="1" Text="{Binding SourceStatus}" Opacity="0.7" />
+      </Grid>
     </Border>
-    <GridSplitter Grid.Column="1" Width="1" ResizeDirection="Columns" />
-    <Border Grid.Column="2" Padding="12">
-      <TextBlock Text="Sessions" Opacity="0.6" />
-    </Border>
-  </Grid>
+
+    <Grid ColumnDefinitions="260,4,*">
+      <TreeView x:Name="Tree" Grid.Column="0"
+                ItemsSource="{Binding Tree.Items}"
+                SelectedItem="{Binding Tree.SelectedItem, Mode=TwoWay}"
+                DragDrop.AllowDrop="True">
+        <TreeView.Styles>
+          <Style Selector="TreeViewItem" x:DataType="vm:TreeItemViewModel">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+          </Style>
+        </TreeView.Styles>
+        <TreeView.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="Connect" IsEnabled="False" InputGesture="Enter" />
+            <MenuItem Header="Settings" IsEnabled="False" />
+            <Separator />
+            <MenuItem Header="New connection" IsEnabled="False" />
+            <MenuItem Header="New folder" IsEnabled="False" />
+            <Separator />
+            <MenuItem Header="Rename" InputGesture="F2"
+                      Command="{Binding Tree.BeginRenameCommand}" CommandParameter="{Binding Tree.SelectedItem}" />
+            <MenuItem Header="Duplicate"
+                      Command="{Binding Tree.DuplicateCommand}" CommandParameter="{Binding Tree.SelectedItem}" />
+            <MenuItem Header="Delete" InputGesture="Delete"
+                      Command="{Binding Tree.DeleteCommand}" CommandParameter="{Binding Tree.SelectedItem}" />
+          </ContextMenu>
+        </TreeView.ContextMenu>
+        <TreeView.ItemTemplate>
+          <TreeDataTemplate x:DataType="vm:TreeItemViewModel" ItemsSource="{Binding Children}">
+            <StackPanel Orientation="Horizontal" Spacing="6" Background="Transparent">
+              <PathIcon Width="14" Height="14" IsVisible="{Binding IsSource}"
+                        Data="M12,3 L2,11 L5,11 L5,21 L10,21 L10,15 L14,15 L14,21 L19,21 L19,11 L22,11 Z" />
+              <PathIcon Width="14" Height="14" IsVisible="{Binding IsFolder}" Foreground="#D8A200"
+                        Data="M2,5 L9,5 L11,7 L22,7 L22,20 L2,20 Z" />
+              <PathIcon Width="14" Height="14" IsVisible="{Binding IsConnection}"
+                        Data="M2,3 L22,3 L22,16 L2,16 Z M10,16 L14,16 L14,19 L17,19 L17,21 L7,21 L7,19 L10,19 Z" />
+              <TextBlock Text="{Binding Name}" IsVisible="{Binding !IsEditing}" VerticalAlignment="Center"
+                         FontWeight="{Binding IsSource, Converter={x:Static vm:Converters.BoolToSemiBold}}" />
+              <TextBox Text="{Binding EditName, Mode=TwoWay}" IsVisible="{Binding IsEditing}"
+                       MinWidth="140" Padding="4,1" Classes="rename" />
+            </StackPanel>
+          </TreeDataTemplate>
+        </TreeView.ItemTemplate>
+      </TreeView>
+
+      <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
+
+      <Border Grid.Column="2" Padding="16">
+        <TextBlock Text="Sessions and settings open here (milestones 6 and 7)." Opacity="0.5"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Border>
+    </Grid>
+  </DockPanel>
 </Window>
