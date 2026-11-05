@@ -71,6 +71,11 @@ public sealed partial class SessionTabViewModel : TabViewModel, IDisposeWinForms
 
     public override string Key => KeyFor(Options.ConnectionId);
 
+    public override bool IsSession => true;
+
+    /// <summary>"Undock" while in the tab, "Redock" while in its own window.</summary>
+    public string UndockMenuText => Location == SessionLocation.Window ? "Redock" : "Undock";
+
     public static string KeyFor(string connectionId) => "session:" + connectionId;
 
     /// <summary>True once the session has connected at least once (auto-close only applies before that).</summary>
@@ -251,6 +256,8 @@ public sealed partial class SessionTabViewModel : TabViewModel, IDisposeWinForms
 
     partial void OnStateChanged(SessionState value) => UpdateDerived();
 
+    partial void OnLocationChanged(SessionLocation value) => OnPropertyChanged(nameof(UndockMenuText));
+
     partial void OnCloseCountdownChanged(int? value) => OnPropertyChanged(nameof(CountdownText));
 
     private void StartConnect()
@@ -272,10 +279,17 @@ public sealed partial class SessionTabViewModel : TabViewModel, IDisposeWinForms
 
     private void OnConnected()
     {
+        var first = !EverConnected;
         EverConnected = true;
         CancelAutoClose();
         State = SessionState.Connected;
         _session?.Focus();
+
+        // A connection set to "Full screen" resolution goes full screen when it first connects.
+        if (first && Options.Display == DisplayMode.FullScreen)
+        {
+            FullScreenRequested?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void OnDisconnected(DisconnectReport report)

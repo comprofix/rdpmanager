@@ -16,6 +16,9 @@ public abstract partial class TabViewModel : ObservableObject
     [ObservableProperty]
     private bool _isInactive;
 
+    /// <summary>True for session tabs (they have their own right-click menu).</summary>
+    public virtual bool IsSession => false;
+
     /// <summary>Identifies what the tab shows, so opening the same thing again switches to the existing tab.</summary>
     public abstract string Key { get; }
 

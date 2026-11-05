@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RDPManager.App.ViewModels"
+             x:Class="RDPManager.App.Views.SessionView"
+             x:DataType="vm:SessionTabViewModel">
+  <!-- DESIGN.md, Agreed layout: session tab states. Nothing in Avalonia can draw over the RDP control,
+       so the Disconnected/Error panel replaces it rather than overlaying it. -->
+  <DockPanel>
+    <Border x:Name="ConnectingBar" DockPanel.Dock="Top" Padding="12,6" BorderThickness="0,0,0,1"
+            BorderBrush="{DynamicResource DividerBrush}" IsVisible="False">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" VerticalAlignment="Center">
+          <Run Text="Connecting to " /><Run Text="{Binding Title}" FontWeight="SemiBold" /><Run Text="…" />
+        </TextBlock>
+        <Button Grid.Column="1" Content="Cancel" Command="{Binding CancelConnectingCommand}" />
+      </Grid>
+    </Border>
+
+    <Panel>
+      <Border x:Name="HostSlot" />
+
+      <!-- Shown in the tab while the session is in its own window or full screen. -->
+      <StackPanel x:Name="MovedPanel" IsVisible="False" Spacing="10"
+                  HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock x:Name="MovedText" HorizontalAlignment="Center" Opacity="0.7" />
+        <Button x:Name="BringBackButton" Content="Bring it back to this tab" HorizontalAlignment="Center"
+                Command="{Binding ToggleUndockCommand}" />
+      </StackPanel>
+
+      <!-- Disconnected / Error. Clicking anywhere on it stops the auto-close countdown. -->
+      <Border x:Name="StatusPanel" IsVisible="False" Background="Transparent">
+        <StackPanel Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560">
+          <TextBlock Text="{Binding PanelHeading}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding Message}" TextWrapping="Wrap" TextAlignment="Center" Opacity="0.8" />
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,6,0,0">
+            <Button Content="Reconnect" Classes="accent" IsVisible="{Binding IsDisconnected}" Command="{Binding ReconnectCommand}" />
+            <Button Content="Retry" Classes="accent" IsVisible="{Binding IsError}" Command="{Binding ReconnectCommand}" />
+            <Button Content="Settings" IsVisible="{Binding IsError}" Command="{Binding OpenSettingsCommand}" />
+            <Button Content="Close tab" Command="{Binding CloseCommand}" />
+          </StackPanel>
+          <Button Content="Show details" Classes="link" HorizontalAlignment="Center" Background="Transparent"
+                  BorderThickness="0" IsVisible="{Binding IsError}" Command="{Binding ToggleDetailsCommand}" />
+          <TextBlock Text="{Binding Details}" IsVisible="{Binding ShowDetails}" HorizontalAlignment="Center"
+                     FontFamily="Consolas, monospace" FontSize="12" Opacity="0.7" />
+          <TextBlock Text="{Binding CountdownText}" HorizontalAlignment="Center" FontSize="12" Opacity="0.6" />
+        </StackPanel>
+      </Border>
+    </Panel>
+  </DockPanel>
+</UserControl>

@@ -42,7 +42,42 @@ public partial class MainWindow : Window
                 tree.Rebuilt -= OnTreeRebuilt;
                 tree.Rebuilt += OnTreeRebuilt;
             }
+
+            if (DataContext is MainWindowViewModel main)
+            {
+                main.PropertyChanged -= OnMainChanged;
+                main.PropertyChanged += OnMainChanged;
+            }
         };
+
+        // Double-clicking a connection connects (folders expand; Avalonia does that itself).
+        Tree.DoubleTapped += (_, e) =>
+        {
+            if (ItemFrom(e.Source) is { IsConnection: true, IsEditing: false } item && DataContext is MainWindowViewModel main)
+            {
+                main.Connect(item);
+                e.Handled = true;
+            }
+        };
+
+        // Double-clicking a session tab's header goes full screen (DESIGN: Session behaviour).
+        Tabs.DoubleTapped += (_, e) =>
+        {
+            if ((e.Source as Control)?.FindAncestorOfType<TabItem>(includeSelf: true)?.DataContext is SessionTabViewModel session)
+            {
+                session.FullScreenCommand.Execute(null);
+                e.Handled = true;
+            }
+        };
+    }
+
+    private void OnMainChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // Selecting a connected session's tab gives it the keyboard.
+        if (e.PropertyName == nameof(MainWindowViewModel.SelectedTab) && sender is MainWindowViewModel { SelectedTab: SessionTabViewModel session })
+        {
+            Dispatcher.UIThread.Post(session.FocusSession, DispatcherPriority.Background);
+        }
     }
 
     private void OnTreeRebuilt(object? sender, EventArgs e)
@@ -224,6 +259,10 @@ public partial class MainWindow : Window
                 break;
             case Key.Delete:
                 _ = tree.DeleteAsync(item);
+                e.Handled = true;
+                break;
+            case Key.Enter when item.IsConnection && DataContext is MainWindowViewModel main:
+                main.Connect(item);
                 e.Handled = true;
                 break;
         }
