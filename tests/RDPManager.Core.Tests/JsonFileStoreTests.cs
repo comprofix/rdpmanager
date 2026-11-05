@@ -107,6 +107,29 @@ public sealed class JsonFileStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task SavingANewFolder_AddsItsContentsAtTheGivenPosition()
+    {
+        var store = NewStore();
+        var tree = await store.LoadAsync();
+        var first = new ConnectionNode { Name = "first" };
+        var last = new ConnectionNode { Name = "last" };
+        await store.SaveNodeAsync(first);
+        await store.SaveNodeAsync(last);
+        var folder = new FolderNode { Name = "Folder" };
+        await store.SaveNodeAsync(folder);
+        await store.SaveNodeAsync(new ConnectionNode { Name = "inside" }, folder.Id);
+
+        var copy = tree.CreateDuplicate(folder.Id);
+        await store.SaveNodeAsync(copy, parentId: null, index: 1);
+
+        var reloaded = await NewStore().LoadAsync();
+        Assert.Equal(["first", "Folder (copy)", "last", "Folder"], reloaded.Roots.Select(n => n.Name));
+        var copiedChild = Assert.Single(((FolderNode)reloaded.Roots[1]).Children);
+        Assert.Equal("inside", copiedChild.Name);
+        Assert.Equal(1, copiedChild.Revision);
+    }
+
+    [Fact]
     public async Task DeleteAndMove_ArePersisted()
     {
         var store = NewStore();

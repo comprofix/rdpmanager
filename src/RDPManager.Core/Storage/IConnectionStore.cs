@@ -13,11 +13,12 @@ public interface IConnectionStore
     Task<ConnectionTree> LoadAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds the node (under <paramref name="parentId"/>, or at the top level) if it is new, or updates the
-    /// existing node with the same id (name, settings and unknown properties; its position is unchanged).
+    /// Adds the node (under <paramref name="parentId"/>, or at the top level, at <paramref name="index"/> or the end)
+    /// if it is new, including any nodes inside a new folder; or updates the existing node with the same id
+    /// (name, settings and unknown properties; its position is unchanged).
     /// Updates <see cref="TreeNode.Modified"/> and <see cref="TreeNode.Revision"/>, then persists.
     /// </summary>
-    Task SaveNodeAsync(TreeNode node, string? parentId = null, CancellationToken cancellationToken = default);
+    Task SaveNodeAsync(TreeNode node, string? parentId = null, int? index = null, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes a node and everything below it, then persists. Returns false if it did not exist.</summary>
     Task<bool> DeleteNodeAsync(string id, CancellationToken cancellationToken = default);

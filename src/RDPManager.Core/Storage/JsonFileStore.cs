@@ -74,37 +74,49 @@ public sealed class JsonFileStore : IConnectionStore
         return _tree;
     }
 
-    public Task SaveNodeAsync(TreeNode node, string? parentId = null, CancellationToken cancellationToken = default)
+    public Task SaveNodeAsync(TreeNode node, string? parentId = null, int? index = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(node);
         var tree = RequireLoaded();
 
         var existing = tree.Find(node.Id);
-        TreeNode target;
         if (existing is null)
         {
-            tree.Add(node, parentId);
-            target = node;
+            tree.Add(node, parentId, index);
+            foreach (var added in Subtree(node))
+            {
+                Touch(added);
+            }
+
+            return WriteAsync(tree, cancellationToken);
         }
-        else
+
+        if (existing.Type != node.Type)
         {
-            if (existing.Type != node.Type)
-            {
-                throw new InvalidOperationException($"Node '{node.Id}' is a {existing.Type}, not a {node.Type}.");
-            }
-
-            if (!ReferenceEquals(existing, node))
-            {
-                existing.Name = node.Name;
-                existing.Settings = (JsonObject)node.Settings.DeepClone();
-                existing.UnknownProperties = node.UnknownProperties;
-            }
-
-            target = existing;
+            throw new InvalidOperationException($"Node '{node.Id}' is a {existing.Type}, not a {node.Type}.");
         }
 
-        Touch(target);
+        if (!ReferenceEquals(existing, node))
+        {
+            existing.Name = node.Name;
+            existing.Settings = (JsonObject)node.Settings.DeepClone();
+            existing.UnknownProperties = node.UnknownProperties;
+        }
+
+        Touch(existing);
         return WriteAsync(tree, cancellationToken);
+    }
+
+    private static IEnumerable<TreeNode> Subtree(TreeNode node)
+    {
+        yield return node;
+        if (node is FolderNode folder)
+        {
+            foreach (var descendant in folder.Children.SelectMany(Subtree))
+            {
+                yield return descendant;
+            }
+        }
     }
 
     public async Task<bool> DeleteNodeAsync(string id, CancellationToken cancellationToken = default)
