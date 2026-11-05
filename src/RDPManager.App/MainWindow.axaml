@@ -7,6 +7,27 @@
         Width="1200" Height="760"
         MinWidth="640" MinHeight="400"
         WindowStartupLocation="CenterScreen">
+  <!-- Colours used below, per theme. Brushes are defined here because theme-resource colours nested
+       inside style setters do not resolve (they render transparent). -->
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="DropTargetBackground" Color="#330078D4" />
+          <SolidColorBrush x:Key="DropTargetBorder" Color="#FF0078D4" />
+          <SolidColorBrush x:Key="DragGhostBackground" Color="#FFFFFFFF" />
+          <SolidColorBrush x:Key="DividerBrush" Color="#1F000000" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="DropTargetBackground" Color="#4460CDFF" />
+          <SolidColorBrush x:Key="DropTargetBorder" Color="#FF60CDFF" />
+          <SolidColorBrush x:Key="DragGhostBackground" Color="#FF2B2B2B" />
+          <SolidColorBrush x:Key="DividerBrush" Color="#2EFFFFFF" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Window.Resources>
+
   <!-- Layout: DESIGN.md, Agreed layout. The menu bar is completed in milestone 9. -->
   <Grid x:Name="Root" DragDrop.AllowDrop="True">
   <DockPanel>
@@ -17,7 +38,7 @@
     </Menu>
 
     <Border DockPanel.Dock="Bottom" Padding="10,3" BorderThickness="0,1,0,0"
-            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            BorderBrush="{DynamicResource DividerBrush}">
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Grid.Column="0" Text="" Opacity="0.7" />
         <TextBlock Grid.Column="1" Text="{Binding SourceStatus}" Opacity="0.7" />
@@ -35,10 +56,8 @@
           </Style>
           <!-- Drag-and-drop: the folder an item would be dropped into. -->
           <Style Selector="Border.row.dropTarget">
-            <Setter Property="Background">
-              <SolidColorBrush Color="{DynamicResource SystemAccentColor}" Opacity="0.3" />
-            </Setter>
-            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+            <Setter Property="Background" Value="{DynamicResource DropTargetBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DropTargetBorder}" />
           </Style>
         </TreeView.Styles>
         <TreeView.ContextMenu>
@@ -91,8 +110,8 @@
   <!-- Drag-and-drop: the item being dragged follows the pointer. -->
   <Canvas x:Name="DragOverlay" IsHitTestVisible="False">
     <Border x:Name="DragGhost" IsVisible="False" Opacity="0.85" Padding="8,3" CornerRadius="4"
-            BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColor}"
-            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+            BorderThickness="1" BorderBrush="{DynamicResource DropTargetBorder}"
+            Background="{DynamicResource DragGhostBackground}">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <PathIcon x:Name="DragGhostIcon" Width="14" Height="14" />
         <TextBlock x:Name="DragGhostText" VerticalAlignment="Center" />
