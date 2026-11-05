@@ -9,16 +9,17 @@ PLAN.md
 .claude/
 
 # Build output
-/bin/
-/dist/
+build/bin/
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
 *.syso
-/alleycat.ico
-/alleycat
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
 
 # Go test / profiling artefacts
 *.test
@@ -32,24 +33,12 @@ go.work.sum
 .env
 .env.*
 
-# Saved settings and high score, written next to the game (DESIGN §9)
-/settings.json
-/scores.json
-
 # Editors / IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# Aseprite backups and art scratch
-*.ase~
-*.aseprite~
-/art-scratch/
-
-# Reference material (screenshots, longplay videos, extracted frames) - never committed
-/ref/
 
 # OS cruft
 .DS_Store
