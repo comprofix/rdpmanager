@@ -283,20 +283,4 @@ public sealed class ConnectionTreeViewModelTests : IDisposable
         Assert.True(_vm.FindItem(_acme.Id)!.IsExpanded);
     }
 
-    private sealed class FakeDialogs : IDialogService
-    {
-        public bool Answer { get; set; }
-
-        public List<string> Questions { get; } = [];
-
-        public List<string> Errors { get; } = [];
-
-        public bool Confirm(string title, string message)
-        {
-            Questions.Add(message);
-            return Answer;
-        }
-
-        public void ShowError(string title, string message) => Errors.Add(message);
-    }
 }

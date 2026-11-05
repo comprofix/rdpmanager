@@ -3,10 +3,15 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- Windows Forms hosts the RDP control (milestone 7) and provides the Task Dialog used for prompts. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>RDPManager</AssemblyName>
     <RootNamespace>RDPManager.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- WFO0003 asks for DPI to be set through Windows Forms. This is an Avalonia app that only hosts
+         Windows Forms controls, so DPI awareness (Per-Monitor V2) stays in app.manifest. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,6 +23,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RDPManager.Core\RDPManager.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Keep Windows Forms types out of the global namespace so they don't clash with Avalonia's (Application, Button, ...). -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
   <ItemGroup>
