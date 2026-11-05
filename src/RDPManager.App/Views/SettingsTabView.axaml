@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RDPManager.App.ViewModels"
+             x:Class="RDPManager.App.Views.SettingsTabView"
+             x:DataType="vm:SettingsTabViewModel">
+  <!-- DESIGN.md, Agreed layout: groups down the left, one group at a time, Save/Cancel always at the top. -->
+  <UserControl.Styles>
+    <Style Selector="TextBox.inherited">
+      <Setter Property="Foreground" Value="{DynamicResource InheritedForeground}" />
+      <Setter Property="FontStyle" Value="Italic" />
+    </Style>
+    <Style Selector="CheckBox.inherited, ComboBox.inherited">
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource DropTargetBorder}" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource DropTargetBorder}" />
+    </Style>
+    <Style Selector="Border.actionbar.modified">
+      <Setter Property="Background" Value="{DynamicResource UnsavedBackground}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="180,*">
+    <ListBox Grid.Column="0" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"
+             Margin="0,8,0,0" Background="Transparent" />
+
+    <DockPanel Grid.Column="1">
+      <Border DockPanel.Dock="Top" Classes="actionbar" Classes.modified="{Binding IsModified}"
+              Padding="16,8" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource DividerBrush}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Text="{Binding StatusText}" VerticalAlignment="Center" Opacity="0.8" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}" MinWidth="80" />
+            <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="80" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <ScrollViewer>
+        <StackPanel Margin="16,8,16,16" Spacing="4" MaxWidth="900" HorizontalAlignment="Left">
+          <TextBlock Text="{Binding Breadcrumb}" Opacity="0.6" FontSize="12" />
+          <TextBlock Text="{Binding Heading}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+          <Grid ColumnDefinitions="220,300,*" IsVisible="{Binding ShowNameField}" Margin="0,4">
+            <TextBlock Grid.Column="0" Text="Name" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Text="{Binding Name, Mode=TwoWay}" />
+          </Grid>
+
+          <ItemsControl ItemsSource="{Binding VisibleFields}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SettingFieldViewModel">
+                <Grid ColumnDefinitions="220,300,*" Margin="0,4">
+                  <TextBlock Grid.Column="0" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" />
+
+                  <TextBox Grid.Column="1" IsVisible="{Binding IsTextLike}" Text="{Binding Text, Mode=TwoWay}"
+                           Classes.inherited="{Binding IsInherited}" />
+                  <CheckBox Grid.Column="1" IsVisible="{Binding IsBoolean}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                            Classes.inherited="{Binding IsInherited}" />
+                  <ComboBox Grid.Column="1" IsVisible="{Binding IsChoice}" ItemsSource="{Binding Choices}"
+                            SelectedItem="{Binding SelectedChoice, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                            Classes.inherited="{Binding IsInherited}" />
+                  <TextBox Grid.Column="1" IsVisible="{Binding IsSecret}" IsEnabled="False" PasswordChar="●" />
+
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <Button Classes="link" IsVisible="{Binding HasSourceLink}" Content="{Binding SourceText}"
+                            Command="{Binding GoToSourceCommand}" ToolTip.Tip="Show this folder in the tree" />
+                    <TextBlock IsVisible="{Binding !HasSourceLink}" Text="{Binding SourceText}" Opacity="0.6" FontSize="12"
+                               VerticalAlignment="Center" />
+                    <Button Classes="link" IsVisible="{Binding CanReset}" Content="Reset" Command="{Binding ResetCommand}"
+                            ToolTip.Tip="Use the inherited value again" />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Grid>
+</UserControl>

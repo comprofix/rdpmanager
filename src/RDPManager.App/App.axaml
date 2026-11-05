@@ -5,4 +5,31 @@
   <Application.Styles>
     <FluentTheme />
   </Application.Styles>
+
+  <!-- App colours, per theme. Brushes are defined here because theme-resource colours nested inside
+       style setters do not resolve (they render transparent). -->
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="DropTargetBackground" Color="#330078D4" />
+          <SolidColorBrush x:Key="DropTargetBorder" Color="#FF0078D4" />
+          <SolidColorBrush x:Key="DragGhostBackground" Color="#FFFFFFFF" />
+          <SolidColorBrush x:Key="DividerBrush" Color="#1F000000" />
+          <SolidColorBrush x:Key="InheritedForeground" Color="#FF767676" />
+          <SolidColorBrush x:Key="UnsavedBackground" Color="#FFFFF4CE" />
+          <SolidColorBrush x:Key="ModifiedDot" Color="#FF0078D4" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="DropTargetBackground" Color="#4460CDFF" />
+          <SolidColorBrush x:Key="DropTargetBorder" Color="#FF60CDFF" />
+          <SolidColorBrush x:Key="DragGhostBackground" Color="#FF2B2B2B" />
+          <SolidColorBrush x:Key="DividerBrush" Color="#2EFFFFFF" />
+          <SolidColorBrush x:Key="InheritedForeground" Color="#FF9A9A9A" />
+          <SolidColorBrush x:Key="UnsavedBackground" Color="#FF433519" />
+          <SolidColorBrush x:Key="ModifiedDot" Color="#FF60CDFF" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
 </Application>

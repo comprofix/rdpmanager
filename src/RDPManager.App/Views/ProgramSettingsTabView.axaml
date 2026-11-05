@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RDPManager.App.ViewModels"
+             x:Class="RDPManager.App.Views.ProgramSettingsTabView"
+             x:DataType="vm:ProgramSettingsTabViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.actionbar.modified">
+      <Setter Property="Background" Value="{DynamicResource UnsavedBackground}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="180,*">
+    <ListBox Grid.Column="0" Margin="0,8,0,0" Background="Transparent" SelectedIndex="0">
+      <ListBoxItem Content="Appearance" />
+    </ListBox>
+
+    <DockPanel Grid.Column="1">
+      <Border DockPanel.Dock="Top" Classes="actionbar" Classes.modified="{Binding IsModified}"
+              Padding="16,8" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource DividerBrush}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Text="{Binding StatusText}" VerticalAlignment="Center" Opacity="0.8" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}" MinWidth="80" />
+            <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="80" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <StackPanel Margin="16,8,16,16" Spacing="6" HorizontalAlignment="Left">
+        <TextBlock Text="This PC only" Opacity="0.6" FontSize="12" />
+        <TextBlock Text="Appearance" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8" />
+        <TextBlock Text="Theme" FontWeight="SemiBold" />
+        <ListBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
+                 Background="Transparent" Width="260" HorizontalAlignment="Left">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChoiceOption">
+              <TextBlock Text="{Binding Label}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock Text="The theme changes when you press Save." Opacity="0.6" FontSize="12" Margin="0,4,0,0" />
+      </StackPanel>
+    </DockPanel>
+  </Grid>
+</UserControl>

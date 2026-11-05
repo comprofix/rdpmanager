@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RDPManager.App.Services;
 using RDPManager.Core.Model;
+using RDPManager.Core.Settings;
 using RDPManager.Core.Storage;
 
 namespace RDPManager.App.ViewModels;
@@ -28,6 +29,15 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
     /// <summary>Raised after the rows were rebuilt (rename, duplicate, delete, move, reload); the view restores keyboard focus.</summary>
     public event EventHandler? Rebuilt;
 
+    /// <summary>Raised after a node was renamed in the tree (id, new name), so an open settings tab can follow.</summary>
+    public event EventHandler<(string Id, string Name)>? NodeRenamed;
+
+    /// <summary>Raised after nodes were deleted (the node and everything inside it), so their settings tabs close.</summary>
+    public event EventHandler<IReadOnlyCollection<string>>? NodesDeleted;
+
+    /// <summary>The loaded tree; settings drafts resolve inherited values against it.</summary>
+    public ConnectionTree Model => _tree;
+
     /// <summary>Shows a tree that has already been loaded from the store.</summary>
     public void SetTree(ConnectionTree tree)
     {
@@ -38,6 +48,58 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
     /// <summary>Finds the row for a node id.</summary>
     public TreeItemViewModel? FindItem(string id) =>
         Items.SelectMany(i => i.SelfAndDescendants()).FirstOrDefault(i => i.Id == id);
+
+    /// <summary>Selects a node in the tree, expanding the folders above it.</summary>
+    public void SelectNode(string id)
+    {
+        if (FindItem(id) is not { } item)
+        {
+            return;
+        }
+
+        for (var parent = item.Parent; parent is not null; parent = parent.Parent)
+        {
+            parent.IsExpanded = true;
+        }
+
+        SelectedItem = item;
+        Rebuilt?.Invoke(this, EventArgs.Empty); // Lets the view move focus to the row.
+    }
+
+    /// <summary>
+    /// Saves a settings draft: adds a new node under its folder, or updates an existing one. Returns false
+    /// (after showing the error) if it could not be saved.
+    /// </summary>
+    public async Task<bool> SaveDraftAsync(NodeDraft draft)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        var node = draft.ToNode();
+        var existing = draft.IsNew ? null : _tree.Find(draft.Id);
+        if (!draft.IsNew && existing is null)
+        {
+            dialogs.ShowError(Title, $"\"{node.Name}\" no longer exists, so the changes could not be saved.");
+            return false;
+        }
+
+        var renamed = existing is not null && existing.Name != node.Name;
+        if (!await TrySaveAsync(() => store.SaveNodeAsync(node, draft.IsNew ? draft.Parent?.Id : null)))
+        {
+            return false;
+        }
+
+        if (draft.IsNew && draft.Parent is { } parent && FindItem(parent.Id) is { } parentItem)
+        {
+            parentItem.IsExpanded = true;
+        }
+
+        Rebuild(selectId: node.Id);
+        if (renamed)
+        {
+            NodeRenamed?.Invoke(this, (node.Id, node.Name));
+        }
+
+        return true;
+    }
 
     [RelayCommand]
     public void BeginRename(TreeItemViewModel? item)
@@ -83,6 +145,7 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
         if (await TrySaveAsync(() => store.SaveNodeAsync(node)))
         {
             Rebuild(selectId: node.Id); // The new name may move it (alphabetical order).
+            NodeRenamed?.Invoke(this, (node.Id, newName));
         }
         else
         {
@@ -121,9 +184,11 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
         }
 
         var selectAfter = node.Parent?.Id;
+        var removedIds = item.SelfAndDescendants().Where(i => i.Id is not null).Select(i => i.Id!).ToList();
         if (await TrySaveAsync(() => store.DeleteNodeAsync(node.Id)))
         {
             Rebuild(selectId: selectAfter);
+            NodesDeleted?.Invoke(this, removedIds);
         }
     }
 
