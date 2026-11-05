@@ -19,6 +19,8 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="RoyalApps.Community.Avalonia.Windows" Version="1.4.0" />
+    <PackageReference Include="RoyalApps.Community.Rdp.WinForms" Version="2.0.9" />
   </ItemGroup>
 
   <ItemGroup>

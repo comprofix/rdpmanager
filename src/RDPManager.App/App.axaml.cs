@@ -96,7 +96,10 @@ public partial class App : Application
                 return tab;
             }
 
-            window.DataContext = new MainWindowViewModel(tree, dialogs, folder, CreateProgramSettingsTab, () => desktop.Shutdown());
+            static IDisposable StartTimer(TimeSpan interval, Action tick) =>
+                Avalonia.Threading.DispatcherTimer.Run(() => { tick(); return true; }, interval);
+
+            window.DataContext = new MainWindowViewModel(tree, dialogs, folder, CreateProgramSettingsTab, StartTimer, () => desktop.Shutdown());
             desktop.MainWindow = window;
         }
 

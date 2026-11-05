@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RDPManager.App.Services;
 using RDPManager.Core.Model;
+using RDPManager.Core.Sessions;
 using RDPManager.Core.Settings;
 
 namespace RDPManager.App.ViewModels;
@@ -12,19 +13,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
 {
     private readonly IDialogService _dialogs;
     private readonly Func<ProgramSettingsTabViewModel> _createProgramSettingsTab;
+    private readonly Func<TimeSpan, Action, IDisposable> _startTimer;
     private readonly Action _exit;
 
+    /// <param name="startTimer">Starts a repeating UI-thread timer (used by session auto-close).</param>
     public MainWindowViewModel(
         ConnectionTreeViewModel tree,
         IDialogService dialogs,
         string storageFolder,
         Func<ProgramSettingsTabViewModel> createProgramSettingsTab,
+        Func<TimeSpan, Action, IDisposable> startTimer,
         Action exit)
     {
         Tree = tree;
         _dialogs = dialogs;
         StorageFolder = storageFolder;
         _createProgramSettingsTab = createProgramSettingsTab;
+        _startTimer = startTimer;
         _exit = exit;
 
         Tree.PropertyChanged += (_, e) =>
@@ -46,6 +51,89 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
         };
         Tabs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTabs));
+    }
+
+    /// <summary>Raised when a session tab is opened, so the view can manage its full-screen and undocked windows.</summary>
+    public event EventHandler<SessionTabViewModel>? SessionOpened;
+
+    /// <summary>Raised after a session tab closed, so the view can close any of its windows.</summary>
+    public event EventHandler<SessionTabViewModel>? SessionClosed;
+
+    /// <summary>Status bar, left: the selected session's state (DESIGN, Agreed layout).</summary>
+    public string SessionStatus => SelectedTab is SessionTabViewModel session ? session.StatusLine : string.Empty;
+
+    partial void OnSelectedTabChanged(TabViewModel? oldValue, TabViewModel? newValue)
+    {
+        if (oldValue is SessionTabViewModel oldSession)
+        {
+            oldSession.PropertyChanged -= OnSelectedSessionChanged;
+        }
+
+        if (newValue is SessionTabViewModel newSession)
+        {
+            newSession.PropertyChanged += OnSelectedSessionChanged;
+        }
+
+        OnPropertyChanged(nameof(SessionStatus));
+    }
+
+    private void OnSelectedSessionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SessionTabViewModel.StatusLine))
+        {
+            OnPropertyChanged(nameof(SessionStatus));
+        }
+    }
+
+    /// <summary>
+    /// Connects to a connection (right-click › Connect, Enter, double-click). If it already has a session
+    /// tab, switches to it instead of opening a second session (DESIGN: Session behaviour).
+    /// </summary>
+    [RelayCommand]
+    public void Connect(TreeItemViewModel? item)
+    {
+        item ??= Tree.SelectedItem;
+        if (item?.Node is not ConnectionNode connection)
+        {
+            return;
+        }
+
+        if (FindTab<SessionTabViewModel>(SessionTabViewModel.KeyFor(connection.Id)) is { } existing)
+        {
+            SelectedTab = existing;
+            return;
+        }
+
+        var options = SessionOptions.For(Tree.Model, connection);
+        if (string.IsNullOrWhiteSpace(options.Host))
+        {
+            _dialogs.ShowError("RDPManager", $"\"{connection.Name}\" has no host. Open its settings and enter the computer's name or address.");
+            return;
+        }
+
+        var session = new SessionTabViewModel(options, _startTimer, CloseSession, OpenSettingsFor);
+        AddTab(session);
+        SessionOpened?.Invoke(this, session);
+    }
+
+    /// <summary>View › Full screen: the selected session.</summary>
+    [RelayCommand]
+    public void FullScreen()
+    {
+        if (SelectedTab is SessionTabViewModel session)
+        {
+            session.FullScreenCommand.Execute(null);
+        }
+    }
+
+    private void CloseSession(SessionTabViewModel session) => _ = CloseTabAsync(session);
+
+    private void OpenSettingsFor(SessionTabViewModel session)
+    {
+        if (Tree.FindItem(session.Options.ConnectionId) is { } item)
+        {
+            OpenSettings(item);
+        }
     }
 
     public ConnectionTreeViewModel Tree { get; }
@@ -112,6 +200,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (tab is not null && Tabs.Contains(tab) && await tab.PrepareToCloseAsync())
         {
             Tabs.Remove(tab);
+            if (tab is SessionTabViewModel session)
+            {
+                SessionClosed?.Invoke(this, session);
+                session.Release();
+            }
         }
     }
 

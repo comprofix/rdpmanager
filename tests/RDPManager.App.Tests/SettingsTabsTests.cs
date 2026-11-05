@@ -43,6 +43,7 @@ public sealed class SettingsTabsTests : IDisposable
             _dialogs,
             _folder,
             () => new ProgramSettingsTabViewModel(settingsStore, new ProgramSettings(), _dialogs, _appliedThemes.Add, canSave: true),
+            (_, _) => new ManualTimer(),
             () => { });
     }
 

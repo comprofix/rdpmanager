@@ -12,6 +12,10 @@ public abstract partial class TabViewModel : ObservableObject
     [ObservableProperty]
     private bool _isModified;
 
+    /// <summary>True for a session tab that is not connected (its title is shown in italics).</summary>
+    [ObservableProperty]
+    private bool _isInactive;
+
     /// <summary>Identifies what the tab shows, so opening the same thing again switches to the existing tab.</summary>
     public abstract string Key { get; }
 
