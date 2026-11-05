@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <AssemblyName>RDPManager</AssemblyName>
     <RootNamespace>RDPManager.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -13,10 +13,15 @@
     <PackageReference Include="Avalonia" Version="12.1.5" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RDPManager.Core\RDPManager.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RDPManager.App.Tests" />
   </ItemGroup>
 
 </Project>
