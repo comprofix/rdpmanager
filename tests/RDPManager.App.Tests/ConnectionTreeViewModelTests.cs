@@ -217,6 +217,36 @@ public sealed class ConnectionTreeViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task DropHighlight_MarksTheDestinationFolderOnly()
+    {
+        await SetUpAsync();
+        var lab = new ConnectionNode { Name = "lab-01" };
+        await _store.SaveNodeAsync(lab);
+        _vm.SetTree(await _store.LoadAsync());
+
+        // Over a connection: its folder is the destination.
+        Assert.True(_vm.UpdateDropHighlight(lab.Id, _dc.Id));
+        Assert.Equal([_acme.Id], HighlightedIds());
+
+        // Over empty space: the source row (top level) is the destination.
+        Assert.True(_vm.UpdateDropHighlight(_dc.Id, null));
+        Assert.True(_vm.Items[0].IsDropTarget);
+        Assert.Single(_vm.Items.SelectMany(i => i.SelfAndDescendants()), i => i.IsDropTarget);
+
+        // Not allowed: nothing highlighted.
+        Assert.False(_vm.UpdateDropHighlight(_clients.Id, _acme.Id));
+        Assert.Empty(HighlightedIds());
+        Assert.False(_vm.Items[0].IsDropTarget);
+
+        _vm.UpdateDropHighlight(lab.Id, _clients.Id);
+        _vm.ClearDropHighlight();
+        Assert.Empty(HighlightedIds());
+    }
+
+    private List<string> HighlightedIds() =>
+        _vm.Items.SelectMany(i => i.SelfAndDescendants()).Where(i => i.IsDropTarget && i.Id is not null).Select(i => i.Id!).ToList();
+
+    [Fact]
     public async Task Rebuild_KeepsExpandedFolders()
     {
         await SetUpAsync();

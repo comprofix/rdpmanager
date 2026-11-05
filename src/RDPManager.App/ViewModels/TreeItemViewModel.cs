@@ -43,6 +43,10 @@ public sealed partial class TreeItemViewModel : ObservableObject
     [ObservableProperty]
     private string _editName = string.Empty;
 
+    /// <summary>True while a dragged item would be dropped into this folder (or this source, for the top level).</summary>
+    [ObservableProperty]
+    private bool _isDropTarget;
+
     public static TreeItemViewModel ForSource(string name) => new(null, name, null) { IsExpanded = true };
 
     public static TreeItemViewModel ForNode(TreeNode node, TreeItemViewModel parent) => new(node, node.Name, parent);

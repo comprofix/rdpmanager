@@ -8,6 +8,7 @@
         MinWidth="640" MinHeight="400"
         WindowStartupLocation="CenterScreen">
   <!-- Layout: DESIGN.md, Agreed layout. The menu bar is completed in milestone 9. -->
+  <Grid x:Name="Root" DragDrop.AllowDrop="True">
   <DockPanel>
     <Menu DockPanel.Dock="Top">
       <MenuItem Header="_File">
@@ -32,6 +33,13 @@
           <Style Selector="TreeViewItem" x:DataType="vm:TreeItemViewModel">
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
           </Style>
+          <!-- Drag-and-drop: the folder an item would be dropped into. -->
+          <Style Selector="Border.row.dropTarget">
+            <Setter Property="Background">
+              <SolidColorBrush Color="{DynamicResource SystemAccentColor}" Opacity="0.3" />
+            </Setter>
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+          </Style>
         </TreeView.Styles>
         <TreeView.ContextMenu>
           <ContextMenu>
@@ -51,7 +59,10 @@
         </TreeView.ContextMenu>
         <TreeView.ItemTemplate>
           <TreeDataTemplate x:DataType="vm:TreeItemViewModel" ItemsSource="{Binding Children}">
-            <StackPanel Orientation="Horizontal" Spacing="6" Background="Transparent">
+            <Border Classes="row" Classes.dropTarget="{Binding IsDropTarget}"
+                    Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
+                    CornerRadius="3" Padding="4,1" Margin="-4,0">
+            <StackPanel Orientation="Horizontal" Spacing="6">
               <PathIcon Width="14" Height="14" IsVisible="{Binding IsSource}"
                         Data="M12,3 L2,11 L5,11 L5,21 L10,21 L10,15 L14,15 L14,21 L19,21 L19,11 L22,11 Z" />
               <PathIcon Width="14" Height="14" IsVisible="{Binding IsFolder}" Foreground="#D8A200"
@@ -63,6 +74,7 @@
               <TextBox Text="{Binding EditName, Mode=TwoWay}" IsVisible="{Binding IsEditing}"
                        MinWidth="140" Padding="4,1" Classes="rename" />
             </StackPanel>
+            </Border>
           </TreeDataTemplate>
         </TreeView.ItemTemplate>
       </TreeView>
@@ -75,4 +87,17 @@
       </Border>
     </Grid>
   </DockPanel>
+
+  <!-- Drag-and-drop: the item being dragged follows the pointer. -->
+  <Canvas x:Name="DragOverlay" IsHitTestVisible="False">
+    <Border x:Name="DragGhost" IsVisible="False" Opacity="0.85" Padding="8,3" CornerRadius="4"
+            BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColor}"
+            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <PathIcon x:Name="DragGhostIcon" Width="14" Height="14" />
+        <TextBlock x:Name="DragGhostText" VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+  </Canvas>
+  </Grid>
 </Window>

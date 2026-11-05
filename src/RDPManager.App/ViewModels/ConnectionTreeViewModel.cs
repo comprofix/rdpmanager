@@ -127,6 +127,34 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
     /// <summary>True when <paramref name="draggedId"/> may be dropped on <paramref name="targetId"/> (null: empty space).</summary>
     public bool CanDrop(string draggedId, string? targetId) => _tree.PlanDrop(draggedId, targetId) is not null;
 
+    /// <summary>
+    /// Highlights where a drop would land: the destination folder, or the source row for the top level.
+    /// Nothing is highlighted when the drop is not allowed. Returns true when a drop is allowed.
+    /// </summary>
+    public bool UpdateDropHighlight(string draggedId, string? targetId)
+    {
+        var placement = _tree.PlanDrop(draggedId, targetId);
+        var destination = placement is null
+            ? null
+            : placement.ParentId is null ? Items.FirstOrDefault() : FindItem(placement.ParentId);
+
+        foreach (var item in Items.SelectMany(i => i.SelfAndDescendants()))
+        {
+            item.IsDropTarget = ReferenceEquals(item, destination);
+        }
+
+        return destination is not null;
+    }
+
+    /// <summary>Removes any drop highlight (the drag ended or left the tree).</summary>
+    public void ClearDropHighlight()
+    {
+        foreach (var item in Items.SelectMany(i => i.SelfAndDescendants()))
+        {
+            item.IsDropTarget = false;
+        }
+    }
+
     /// <summary>Moves a dragged node according to the drop rules. Returns false if the drop is not allowed.</summary>
     public async Task<bool> DropAsync(string draggedId, string? targetId)
     {
