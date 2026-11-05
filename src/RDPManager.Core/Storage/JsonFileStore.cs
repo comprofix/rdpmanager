@@ -195,21 +195,8 @@ public sealed class JsonFileStore : IConnectionStore
         }
     }
 
-    private async Task WriteAsync(ConnectionTree tree, CancellationToken cancellationToken)
-    {
-        Directory.CreateDirectory(Folder);
-        var tempPath = FilePath + ".tmp";
-        var document = ConnectionDocument.FromTree(tree);
-
-        await using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
-        {
-            await JsonSerializer.SerializeAsync(stream, document, SerializerOptions, cancellationToken);
-            await stream.FlushAsync(cancellationToken);
-            stream.Flush(flushToDisk: true);
-        }
-
-        File.Move(tempPath, FilePath, overwrite: true);
-    }
+    private Task WriteAsync(ConnectionTree tree, CancellationToken cancellationToken) =>
+        SafeFile.WriteJsonAsync(FilePath, ConnectionDocument.FromTree(tree), SerializerOptions, cancellationToken);
 
     private void BackUp()
     {
