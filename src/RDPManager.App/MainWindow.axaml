@@ -55,6 +55,12 @@
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
           </Style>
           <!-- Drag-and-drop: the folder an item would be dropped into. -->
+          <!-- Defaults live in a style, not on the Border itself: a value set directly on a control
+               outranks styles, which would stop the drop-target style from taking effect. -->
+          <Style Selector="Border.row">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+          </Style>
           <Style Selector="Border.row.dropTarget">
             <Setter Property="Background" Value="{DynamicResource DropTargetBackground}" />
             <Setter Property="BorderBrush" Value="{DynamicResource DropTargetBorder}" />
@@ -79,8 +85,7 @@
         <TreeView.ItemTemplate>
           <TreeDataTemplate x:DataType="vm:TreeItemViewModel" ItemsSource="{Binding Children}">
             <Border Classes="row" Classes.dropTarget="{Binding IsDropTarget}"
-                    Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
-                    CornerRadius="3" Padding="4,1" Margin="-4,0">
+                    BorderThickness="1" CornerRadius="3" Padding="4,1" Margin="-4,0">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <PathIcon Width="14" Height="14" IsVisible="{Binding IsSource}"
                         Data="M12,3 L2,11 L5,11 L5,21 L10,21 L10,15 L14,15 L14,21 L19,21 L19,11 L22,11 Z" />
