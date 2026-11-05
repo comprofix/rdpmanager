@@ -32,6 +32,41 @@ public partial class MainWindow : Window
         // In-place rename: focus the box when it appears; Enter or leaving it saves, Esc cancels.
         AddHandler(KeyDownEvent, OnRenameKeyDown, RoutingStrategies.Tunnel);
         AddHandler(LostFocusEvent, OnRenameLostFocus, RoutingStrategies.Bubble);
+
+        // Rebuilding the rows (after rename, duplicate, delete or move) recreates them and loses keyboard
+        // focus; put it back on the selected row so F2 and Del keep working.
+        DataContextChanged += (_, _) =>
+        {
+            if (TreeModel is { } tree)
+            {
+                tree.Rebuilt -= OnTreeRebuilt;
+                tree.Rebuilt += OnTreeRebuilt;
+            }
+        };
+    }
+
+    private void OnTreeRebuilt(object? sender, EventArgs e)
+    {
+        if (IsActive)
+        {
+            FocusSelectedRow();
+        }
+    }
+
+    /// <summary>Focuses the selected row once its control exists.</summary>
+    private void FocusSelectedRow()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (TreeModel?.SelectedItem is { } selected && Tree.TreeContainerFromItem(selected) is Control row)
+            {
+                row.Focus(NavigationMethod.Tab);
+            }
+            else
+            {
+                Tree.Focus();
+            }
+        }, DispatcherPriority.Loaded);
     }
 
     static MainWindow()
@@ -194,7 +229,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnRenameKeyDown(object? sender, KeyEventArgs e)
+    private async void OnRenameKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Source is not TextBox box || !box.Classes.Contains("rename") || box.DataContext is not TreeItemViewModel item || TreeModel is not { } tree)
         {
@@ -203,15 +238,15 @@ public partial class MainWindow : Window
 
         if (e.Key == Key.Enter)
         {
-            _ = tree.CommitRenameAsync(item);
-            Tree.Focus();
             e.Handled = true;
+            await tree.CommitRenameAsync(item);
+            FocusSelectedRow();
         }
         else if (e.Key == Key.Escape)
         {
-            tree.CancelRename(item);
-            Tree.Focus();
             e.Handled = true;
+            tree.CancelRename(item);
+            FocusSelectedRow();
         }
     }
 

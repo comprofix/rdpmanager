@@ -25,6 +25,9 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
     [ObservableProperty]
     private TreeItemViewModel? _selectedItem;
 
+    /// <summary>Raised after the rows were rebuilt (rename, duplicate, delete, move, reload); the view restores keyboard focus.</summary>
+    public event EventHandler? Rebuilt;
+
     /// <summary>Shows a tree that has already been loaded from the store.</summary>
     public void SetTree(ConnectionTree tree)
     {
@@ -247,6 +250,7 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
         Items.Clear();
         Items.Add(source);
         SelectedItem = selectId is null ? source : FindItem(selectId) ?? source;
+        Rebuilt?.Invoke(this, EventArgs.Empty);
     }
 
     private static TreeItemViewModel Build(TreeNode node, TreeItemViewModel parent, HashSet<string> expanded)

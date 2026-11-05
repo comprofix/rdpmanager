@@ -247,6 +247,30 @@ public sealed class ConnectionTreeViewModelTests : IDisposable
         _vm.Items.SelectMany(i => i.SelfAndDescendants()).Where(i => i.IsDropTarget && i.Id is not null).Select(i => i.Id!).ToList();
 
     [Fact]
+    public async Task Rebuilt_IsRaisedAfterEveryTreeChange()
+    {
+        await SetUpAsync();
+        _dialogs.Answer = true;
+        var count = 0;
+        _vm.Rebuilt += (_, _) => count++;
+
+        var item = _vm.FindItem(_dc.Id)!;
+        _vm.BeginRename(item);
+        item.EditName = "acme-dc02";
+        await _vm.CommitRenameAsync(item);
+        Assert.Equal(1, count);
+
+        await _vm.DuplicateAsync(_vm.FindItem(_dc.Id));
+        Assert.Equal(2, count);
+
+        await _vm.DropAsync(_dc.Id, _clients.Id);
+        Assert.Equal(3, count);
+
+        await _vm.DeleteAsync(_vm.FindItem(_fs.Id));
+        Assert.Equal(4, count);
+    }
+
+    [Fact]
     public async Task Rebuild_KeepsExpandedFolders()
     {
         await SetUpAsync();
