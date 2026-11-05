@@ -30,6 +30,9 @@ Set-StrictMode -Version Latest
 
 $solution = Join-Path $PSScriptRoot 'RDPManager.slnx'
 
+# Opt out of Avalonia's anonymous build-time telemetry (Avalonia.BuildServices).
+$env:AVALONIA_TELEMETRY_OPTOUT = '1'
+
 function Invoke-Step {
     param([string] $Name, [scriptblock] $Command)
     Write-Host "==> $Name" -ForegroundColor Cyan

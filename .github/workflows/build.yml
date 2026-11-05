@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Opt out of Avalonia's anonymous build-time telemetry (Avalonia.BuildServices).
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+
 jobs:
   build:
     name: Build and test (Windows)
