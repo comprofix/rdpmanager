@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using RDPManager.App.Sessions;
 using RDPManager.App.ViewModels;
 
 namespace RDPManager.App;
@@ -47,6 +48,10 @@ public partial class MainWindow : Window
             {
                 main.PropertyChanged -= OnMainChanged;
                 main.PropertyChanged += OnMainChanged;
+                main.SessionOpened -= OnSessionOpened;
+                main.SessionOpened += OnSessionOpened;
+                main.SessionClosed -= OnSessionClosed;
+                main.SessionClosed += OnSessionClosed;
             }
         };
 
@@ -70,6 +75,14 @@ public partial class MainWindow : Window
             }
         };
     }
+
+    private SessionWindowManager? _sessionWindows;
+
+    private SessionWindowManager SessionWindows => _sessionWindows ??= new SessionWindowManager(this);
+
+    private void OnSessionOpened(object? sender, SessionTabViewModel session) => SessionWindows.Track(session);
+
+    private void OnSessionClosed(object? sender, SessionTabViewModel session) => SessionWindows.Forget(session);
 
     private void OnMainChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
