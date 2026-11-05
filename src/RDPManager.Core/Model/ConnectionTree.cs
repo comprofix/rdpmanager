@@ -3,14 +3,14 @@ using System.Text.Json.Nodes;
 
 namespace RDPManager.Core.Model;
 
-/// <summary>Where a dropped node goes: a parent folder (null for the top level) and a position.</summary>
+/// <summary>Where a dropped node goes.</summary>
 /// <param name="ParentId">The folder to move into, or null for the top level.</param>
-/// <param name="Index">Position among the new siblings; <see cref="int.MaxValue"/> means "at the end".</param>
-public sealed record DropPlacement(string? ParentId, int Index);
+public sealed record DropPlacement(string? ParentId);
 
 /// <summary>
 /// The whole connection tree of one source: top-level nodes, file-level defaults and any properties
-/// this version does not recognise.
+/// this version does not recognise. Within every folder (and the top level) nodes are kept in
+/// <see cref="NodeOrder"/>: folders first, then connections, each alphabetically.
 /// </summary>
 public sealed class ConnectionTree
 {
@@ -49,8 +49,8 @@ public sealed class ConnectionTree
 
     public TreeNode? Find(string id) => AllNodes().FirstOrDefault(n => n.Id == id);
 
-    /// <summary>Adds a node under a folder (or at the top level when <paramref name="parentId"/> is null).</summary>
-    public void Add(TreeNode node, string? parentId = null, int? index = null)
+    /// <summary>Adds a node under a folder (or at the top level when <paramref name="parentId"/> is null), in order.</summary>
+    public void Add(TreeNode node, string? parentId = null)
     {
         ArgumentNullException.ThrowIfNull(node);
         if (Find(node.Id) is not null)
@@ -58,7 +58,16 @@ public sealed class ConnectionTree
             throw new InvalidOperationException($"A node with id '{node.Id}' already exists.");
         }
 
-        Insert(node, ResolveFolder(parentId), index);
+        Insert(node, ResolveFolder(parentId));
+    }
+
+    /// <summary>Puts a node back in order among its siblings, for example after it was renamed.</summary>
+    public void Reorder(TreeNode node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        var parent = node.Parent;
+        Detach(node);
+        Insert(node, parent);
     }
 
     /// <summary>Removes a node and everything below it. Returns false if it does not exist.</summary>
@@ -74,8 +83,8 @@ public sealed class ConnectionTree
         return true;
     }
 
-    /// <summary>Moves a node to another folder (or the top level) at the given position.</summary>
-    public void Move(string id, string? newParentId, int index)
+    /// <summary>Moves a node to another folder (or the top level), in order.</summary>
+    public void Move(string id, string? newParentId)
     {
         var node = Find(id) ?? throw new KeyNotFoundException($"No node with id '{id}'.");
         var target = ResolveFolder(newParentId);
@@ -86,7 +95,7 @@ public sealed class ConnectionTree
         }
 
         Detach(node);
-        Insert(node, target, index);
+        Insert(node, target);
     }
 
     /// <summary>The node's position among its siblings.</summary>
@@ -142,9 +151,9 @@ public sealed class ConnectionTree
     }
 
     /// <summary>
-    /// Works out where a dragged node goes when dropped on <paramref name="targetId"/>: into a folder (at the end),
-    /// just before a connection (to reorder), or at the end of the top level when the target is null.
-    /// Returns null when the drop is not allowed (onto itself, or a folder into itself or one of its subfolders).
+    /// Works out where a dragged node goes when dropped on <paramref name="targetId"/>: into a folder; into a
+    /// connection's folder; or to the top level when the target is null. Order is automatic (see <see cref="NodeOrder"/>).
+    /// Returns null when the drop is not allowed (a folder into itself or one of its subfolders) or would change nothing.
     /// </summary>
     public DropPlacement? PlanDrop(string draggedId, string? targetId)
     {
@@ -154,35 +163,28 @@ public sealed class ConnectionTree
             return null;
         }
 
+        FolderNode? destination;
         if (targetId is null)
         {
-            return new DropPlacement(null, int.MaxValue);
+            destination = null;
+        }
+        else
+        {
+            var target = Find(targetId);
+            if (target is null)
+            {
+                return null;
+            }
+
+            destination = target as FolderNode ?? target.Parent;
         }
 
-        var target = Find(targetId);
-        if (target is null || ReferenceEquals(target, dragged))
+        if (destination is not null && (ReferenceEquals(destination, dragged) || destination.Ancestors().Contains(dragged)))
         {
             return null;
         }
 
-        if (target is FolderNode folder)
-        {
-            return folder.Ancestors().Contains(dragged) ? null : new DropPlacement(folder.Id, int.MaxValue);
-        }
-
-        var parent = target.Parent;
-        if (parent is not null && (ReferenceEquals(parent, dragged) || parent.Ancestors().Contains(dragged)))
-        {
-            return null;
-        }
-
-        var index = IndexOf(target);
-        if (ReferenceEquals(dragged.Parent, parent) && IndexOf(dragged) < index)
-        {
-            index--; // The dragged node is removed first, which shifts the target up by one.
-        }
-
-        return new DropPlacement(parent?.Id, index);
+        return ReferenceEquals(destination, dragged.Parent) ? null : new DropPlacement(destination?.Id);
     }
 
     private static TreeNode Copy(TreeNode original)
@@ -201,7 +203,8 @@ public sealed class ConnectionTree
         {
             foreach (var child in folder.Children)
             {
-                folderCopy.InsertChild(folderCopy.Children.Count, Copy(child));
+                var childCopy = Copy(child);
+                folderCopy.InsertChild(SortedIndex(folderCopy.Children, childCopy), childCopy);
             }
         }
 
@@ -223,17 +226,29 @@ public sealed class ConnectionTree
         };
     }
 
-    private void Insert(TreeNode node, FolderNode? parent, int? index)
+    private void Insert(TreeNode node, FolderNode? parent)
     {
         if (parent is null)
         {
             node.Parent = null;
-            _roots.Insert(Math.Clamp(index ?? _roots.Count, 0, _roots.Count), node);
+            _roots.Insert(SortedIndex(_roots, node), node);
         }
         else
         {
-            parent.InsertChild(index ?? parent.Children.Count, node);
+            parent.InsertChild(SortedIndex(parent.Children, node), node);
         }
+    }
+
+    /// <summary>The position that keeps <paramref name="siblings"/> in <see cref="NodeOrder"/>.</summary>
+    private static int SortedIndex(IReadOnlyList<TreeNode> siblings, TreeNode node)
+    {
+        var index = 0;
+        while (index < siblings.Count && NodeOrder.Instance.Compare(siblings[index], node) <= 0)
+        {
+            index++;
+        }
+
+        return index;
     }
 
     private void Detach(TreeNode node)

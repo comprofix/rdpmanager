@@ -79,7 +79,7 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
         node.Name = newName;
         if (await TrySaveAsync(() => store.SaveNodeAsync(node)))
         {
-            item.Name = newName;
+            Rebuild(selectId: node.Id); // The new name may move it (alphabetical order).
         }
         else
         {
@@ -97,7 +97,7 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
         }
 
         var copy = _tree.CreateDuplicate(node.Id);
-        if (await TrySaveAsync(() => store.SaveNodeAsync(copy, node.Parent?.Id, _tree.IndexOf(node) + 1)))
+        if (await TrySaveAsync(() => store.SaveNodeAsync(copy, node.Parent?.Id)))
         {
             Rebuild(selectId: copy.Id);
         }
@@ -136,7 +136,7 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
             return false;
         }
 
-        if (!await TrySaveAsync(() => store.MoveNodeAsync(draggedId, placement.ParentId, placement.Index)))
+        if (!await TrySaveAsync(() => store.MoveNodeAsync(draggedId, placement.ParentId)))
         {
             return false;
         }

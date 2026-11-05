@@ -74,7 +74,7 @@ public sealed class JsonFileStore : IConnectionStore
         return _tree;
     }
 
-    public Task SaveNodeAsync(TreeNode node, string? parentId = null, int? index = null, CancellationToken cancellationToken = default)
+    public Task SaveNodeAsync(TreeNode node, string? parentId = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(node);
         var tree = RequireLoaded();
@@ -82,7 +82,7 @@ public sealed class JsonFileStore : IConnectionStore
         var existing = tree.Find(node.Id);
         if (existing is null)
         {
-            tree.Add(node, parentId, index);
+            tree.Add(node, parentId);
             foreach (var added in Subtree(node))
             {
                 Touch(added);
@@ -103,6 +103,7 @@ public sealed class JsonFileStore : IConnectionStore
             existing.UnknownProperties = node.UnknownProperties;
         }
 
+        tree.Reorder(existing); // The name may have changed.
         Touch(existing);
         return WriteAsync(tree, cancellationToken);
     }
@@ -131,10 +132,10 @@ public sealed class JsonFileStore : IConnectionStore
         return true;
     }
 
-    public Task MoveNodeAsync(string id, string? newParentId, int index, CancellationToken cancellationToken = default)
+    public Task MoveNodeAsync(string id, string? newParentId, CancellationToken cancellationToken = default)
     {
         var tree = RequireLoaded();
-        tree.Move(id, newParentId, index);
+        tree.Move(id, newParentId);
         Touch(tree.Find(id)!);
         return WriteAsync(tree, cancellationToken);
     }

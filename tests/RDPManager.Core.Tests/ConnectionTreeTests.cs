@@ -57,20 +57,52 @@ public class ConnectionTreeTests
     }
 
     [Fact]
-    public void Move_ChangesParentAndPosition()
+    public void Move_ChangesParentAndKeepsOrder()
     {
         var (tree, clients, acme, dc) = Sample();
         var other = new ConnectionNode { Name = "acme-fs01" };
         tree.Add(other, acme.Id);
 
-        tree.Move(dc.Id, null, 0);
-        Assert.Same(dc, tree.Roots[0]);
+        tree.Move(dc.Id, null);
+        Assert.Equal([clients, dc], tree.Roots); // Folder first, then connection.
         Assert.Null(dc.Parent);
 
-        tree.Move(dc.Id, acme.Id, 0);
-        Assert.Equal([dc, other], acme.Children);
+        tree.Move(dc.Id, acme.Id);
+        Assert.Equal([dc, other], acme.Children); // Alphabetical.
         Assert.Same(acme, dc.Parent);
         Assert.Same(clients, Assert.Single(tree.Roots));
+    }
+
+    [Fact]
+    public void Children_AreFoldersFirstThenConnections_EachAlphabetical()
+    {
+        var tree = new ConnectionTree();
+        var parent = new FolderNode { Name = "Parent" };
+        tree.Add(parent);
+        foreach (var name in new[] { "zeta", "Alpha", "server10", "server2" })
+        {
+            tree.Add(new ConnectionNode { Name = name }, parent.Id);
+        }
+
+        foreach (var name in new[] { "Zulu", "bravo" })
+        {
+            tree.Add(new FolderNode { Name = name }, parent.Id);
+        }
+
+        Assert.Equal(["bravo", "Zulu", "Alpha", "server2", "server10", "zeta"], parent.Children.Select(c => c.Name));
+    }
+
+    [Fact]
+    public void Reorder_MovesARenamedNodeToItsPlace()
+    {
+        var (tree, _, acme, dc) = Sample();
+        var fs = new ConnectionNode { Name = "acme-fs01" };
+        tree.Add(fs, acme.Id);
+
+        dc.Name = "zz-dc";
+        tree.Reorder(dc);
+
+        Assert.Equal([fs, dc], acme.Children);
     }
 
     [Fact]
@@ -109,53 +141,68 @@ public class ConnectionTreeTests
     }
 
     [Fact]
-    public void PlanDrop_OntoFolder_MovesIntoItAtTheEnd()
+    public void PlanDrop_OntoFolder_MovesIntoIt()
     {
         var (tree, clients, _, dc) = Sample();
 
-        Assert.Equal(new DropPlacement(clients.Id, int.MaxValue), tree.PlanDrop(dc.Id, clients.Id));
+        Assert.Equal(new DropPlacement(clients.Id), tree.PlanDrop(dc.Id, clients.Id));
     }
 
     [Fact]
-    public void PlanDrop_OntoConnection_MovesBeforeIt()
+    public void PlanDrop_OntoConnection_MovesIntoItsFolder()
     {
-        var (tree, _, acme, dc) = Sample();
-        var fs = new ConnectionNode { Name = "fs" };
-        var web = new ConnectionNode { Name = "web" };
-        tree.Add(fs, acme.Id);
-        tree.Add(web, acme.Id); // acme: dc(0), fs(1), web(2)
+        var (tree, clients, acme, _) = Sample();
+        var lab = new ConnectionNode { Name = "lab-01" };
+        tree.Add(lab);
 
-        // Moving down: dc onto web lands between fs and web.
-        var down = tree.PlanDrop(dc.Id, web.Id)!;
-        tree.Move(dc.Id, down.ParentId, down.Index);
-        Assert.Equal([fs, dc, web], acme.Children);
-
-        // Moving up: web onto fs lands first.
-        var up = tree.PlanDrop(web.Id, fs.Id)!;
-        tree.Move(web.Id, up.ParentId, up.Index);
-        Assert.Equal([web, fs, dc], acme.Children);
+        Assert.Equal(new DropPlacement(acme.Id), tree.PlanDrop(lab.Id, acme.Id)); // A folder: into it.
+        var target = new ConnectionNode { Name = "other" };
+        tree.Add(target, clients.Id);
+        Assert.Equal(new DropPlacement(clients.Id), tree.PlanDrop(lab.Id, target.Id));
     }
 
     [Fact]
-    public void PlanDrop_OnEmptySpace_MovesToTopLevelEnd()
+    public void PlanDrop_FolderLandsAboveConnections()
+    {
+        // The owner's case: moving "Firewalls" into a folder that holds a connection puts it first.
+        var (tree, clients, acme, _) = Sample();
+        var globex = new FolderNode { Name = "Globex" };
+        tree.Add(globex, clients.Id);
+        var app = new ConnectionNode { Name = "globex-app01" };
+        tree.Add(app, globex.Id);
+        var firewalls = new FolderNode { Name = "Firewalls" };
+        tree.Add(firewalls, acme.Id);
+
+        var placement = tree.PlanDrop(firewalls.Id, globex.Id)!;
+        tree.Move(firewalls.Id, placement.ParentId);
+
+        Assert.Equal([firewalls, app], globex.Children);
+    }
+
+    [Fact]
+    public void PlanDrop_OnEmptySpace_MovesToTopLevel()
     {
         var (tree, clients, _, dc) = Sample();
 
         var placement = tree.PlanDrop(dc.Id, null)!;
-        tree.Move(dc.Id, placement.ParentId, placement.Index);
+        tree.Move(dc.Id, placement.ParentId);
 
         Assert.Equal([clients, dc], tree.Roots);
     }
 
     [Fact]
-    public void PlanDrop_RejectsDropsIntoItself()
+    public void PlanDrop_RejectsDropsIntoItselfAndDropsThatChangeNothing()
     {
         var (tree, clients, acme, dc) = Sample();
+        var fs = new ConnectionNode { Name = "fs" };
+        tree.Add(fs, acme.Id);
 
         Assert.Null(tree.PlanDrop(acme.Id, acme.Id));
         Assert.Null(tree.PlanDrop(clients.Id, acme.Id));
         Assert.Null(tree.PlanDrop(clients.Id, dc.Id));
         Assert.Null(tree.PlanDrop("missing", acme.Id));
+        Assert.Null(tree.PlanDrop(dc.Id, fs.Id)); // Already in that folder.
+        Assert.Null(tree.PlanDrop(clients.Id, null)); // Already at the top level.
     }
 
     [Fact]
@@ -163,7 +210,7 @@ public class ConnectionTreeTests
     {
         var (tree, clients, acme, _) = Sample();
 
-        Assert.Throws<InvalidOperationException>(() => tree.Move(clients.Id, clients.Id, 0));
-        Assert.Throws<InvalidOperationException>(() => tree.Move(clients.Id, acme.Id, 0));
+        Assert.Throws<InvalidOperationException>(() => tree.Move(clients.Id, clients.Id));
+        Assert.Throws<InvalidOperationException>(() => tree.Move(clients.Id, acme.Id));
     }
 }

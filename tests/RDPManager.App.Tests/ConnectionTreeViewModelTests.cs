@@ -69,7 +69,7 @@ public sealed class ConnectionTreeViewModelTests : IDisposable
         await _vm.CommitRenameAsync(item);
 
         Assert.False(item.IsEditing);
-        Assert.Equal("acme-dc02", item.Name);
+        Assert.Equal("acme-dc02", _vm.FindItem(_dc.Id)!.Name);
         Assert.Equal("acme-dc02", (await ReloadAsync(_folder)).Find(_dc.Id)!.Name);
     }
 
@@ -181,14 +181,29 @@ public sealed class ConnectionTreeViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Drop_OntoConnectionReorders()
+    public async Task Drop_OntoConnectionInSameFolder_ChangesNothing()
     {
         await SetUpAsync();
 
-        Assert.True(await _vm.DropAsync(_fs.Id, _dc.Id));
+        Assert.False(_vm.CanDrop(_fs.Id, _dc.Id));
+        Assert.False(await _vm.DropAsync(_fs.Id, _dc.Id));
 
         var acme = (FolderNode)(await ReloadAsync(_folder)).Find(_acme.Id)!;
-        Assert.Equal(["acme-fs01", "acme-dc01"], acme.Children.Select(c => c.Name));
+        Assert.Equal(["acme-dc01", "acme-fs01"], acme.Children.Select(c => c.Name));
+    }
+
+    [Fact]
+    public async Task Rename_MovesItemToItsAlphabeticalPlace()
+    {
+        await SetUpAsync();
+        var item = _vm.FindItem(_dc.Id)!;
+
+        _vm.BeginRename(item);
+        item.EditName = "acme-zz01";
+        await _vm.CommitRenameAsync(item);
+
+        Assert.Equal(["acme-fs01", "acme-zz01"], _vm.FindItem(_acme.Id)!.Children.Select(c => c.Name));
+        Assert.Equal(_dc.Id, _vm.SelectedItem!.Id);
     }
 
     [Fact]

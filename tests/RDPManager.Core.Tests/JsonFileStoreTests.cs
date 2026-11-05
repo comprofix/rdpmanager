@@ -107,26 +107,56 @@ public sealed class JsonFileStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task SavingANewFolder_AddsItsContentsAtTheGivenPosition()
+    public async Task SavingANewFolder_AddsItsContentsInOrder()
     {
         var store = NewStore();
         var tree = await store.LoadAsync();
-        var first = new ConnectionNode { Name = "first" };
-        var last = new ConnectionNode { Name = "last" };
-        await store.SaveNodeAsync(first);
-        await store.SaveNodeAsync(last);
+        await store.SaveNodeAsync(new ConnectionNode { Name = "first" });
+        await store.SaveNodeAsync(new ConnectionNode { Name = "last" });
         var folder = new FolderNode { Name = "Folder" };
         await store.SaveNodeAsync(folder);
         await store.SaveNodeAsync(new ConnectionNode { Name = "inside" }, folder.Id);
 
         var copy = tree.CreateDuplicate(folder.Id);
-        await store.SaveNodeAsync(copy, parentId: null, index: 1);
+        await store.SaveNodeAsync(copy);
 
         var reloaded = await NewStore().LoadAsync();
-        Assert.Equal(["first", "Folder (copy)", "last", "Folder"], reloaded.Roots.Select(n => n.Name));
+        Assert.Equal(["Folder", "Folder (copy)", "first", "last"], reloaded.Roots.Select(n => n.Name));
         var copiedChild = Assert.Single(((FolderNode)reloaded.Roots[1]).Children);
         Assert.Equal("inside", copiedChild.Name);
         Assert.Equal(1, copiedChild.Revision);
+    }
+
+    [Fact]
+    public async Task Rename_MovesTheNodeToItsAlphabeticalPlace()
+    {
+        var store = NewStore();
+        await store.LoadAsync();
+        var alpha = new ConnectionNode { Name = "alpha" };
+        await store.SaveNodeAsync(alpha);
+        await store.SaveNodeAsync(new ConnectionNode { Name = "bravo" });
+
+        alpha.Name = "charlie";
+        await store.SaveNodeAsync(alpha);
+
+        Assert.Equal(["bravo", "charlie"], (await NewStore().LoadAsync()).Roots.Select(n => n.Name));
+    }
+
+    [Fact]
+    public async Task FileInAnyOrder_IsShownFoldersFirstAlphabetically()
+    {
+        WriteFile("""
+            { "schemaVersion": 1, "nodes": [
+              { "id": "c2", "type": "connection", "name": "zeta" },
+              { "id": "f2", "type": "folder", "name": "Lab" },
+              { "id": "c1", "type": "connection", "name": "alpha" },
+              { "id": "f1", "type": "folder", "name": "Clients" }
+            ] }
+            """);
+
+        var tree = await NewStore().LoadAsync();
+
+        Assert.Equal(["Clients", "Lab", "alpha", "zeta"], tree.Roots.Select(n => n.Name));
     }
 
     [Fact]
@@ -141,7 +171,7 @@ public sealed class JsonFileStoreTests : IDisposable
         await store.SaveNodeAsync(b);
         await store.SaveNodeAsync(dc, a.Id);
 
-        await store.MoveNodeAsync(dc.Id, b.Id, 0);
+        await store.MoveNodeAsync(dc.Id, b.Id);
         Assert.True(await store.DeleteNodeAsync(a.Id));
         Assert.False(await store.DeleteNodeAsync(a.Id));
 
