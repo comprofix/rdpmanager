@@ -19,7 +19,7 @@ public sealed class RdpSessionHost : WinFormsControlHost<RdpControl>
         }
 
         var control = new RdpControl { Dock = WinForms.DockStyle.Fill };
-        RdpConfigurationMapper.Apply(tab.Options, control.RdpConfiguration);
+        RdpConfigurationMapper.Apply(tab.Options, tab.Secrets, control.RdpConfiguration);
         var session = new RdpRemoteSession(control);
 
         // Connect once the native window exists; later re-attachments reuse the live control.

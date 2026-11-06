@@ -1,3 +1,4 @@
+using RDPManager.Core.Credentials;
 using RDPManager.Core.Sessions;
 using RoyalApps.Community.Rdp.WinForms.Configuration;
 using RoyalApps.Community.Rdp.WinForms.Configuration.Connection;
@@ -14,15 +15,19 @@ namespace RDPManager.App.Sessions;
 /// </summary>
 internal static class RdpConfigurationMapper
 {
-    public static void Apply(SessionOptions o, RdpClientConfiguration config)
+    public static void Apply(SessionOptions o, SessionSecrets secrets, RdpClientConfiguration config)
     {
         config.SessionMode = RdpSessionMode.Embedded;
         config.Server = o.Host;
         config.Port = o.Port;
 
-        // Passwords arrive with milestone 8; until then the control's own credential prompt asks.
+        // Without a stored password the control's own Windows credential prompt asks (DESIGN: Credentials).
         config.Credentials.Username = o.Username;
         config.Credentials.Domain = o.Domain;
+        if (!string.IsNullOrEmpty(secrets.Password))
+        {
+            config.Credentials.Password = new SensitiveString(secrets.Password);
+        }
         config.Credentials.NetworkLevelAuthentication = o.NetworkLevelAuthentication;
 
         config.Display.AutoScaling = true;
@@ -70,6 +75,10 @@ internal static class RdpConfigurationMapper
             config.Gateway.GatewayCredSharing = o.GatewaySameCredentials;
             config.Gateway.GatewayUsername = o.GatewaySameCredentials ? o.Username : o.GatewayUsername;
             config.Gateway.GatewayDomain = o.GatewaySameCredentials ? o.Domain : o.GatewayDomain;
+            if (!string.IsNullOrEmpty(secrets.GatewayPassword))
+            {
+                config.Gateway.GatewayPassword = new SensitiveString(secrets.GatewayPassword);
+            }
         }
 
         config.Redirection.RedirectClipboard = o.RedirectClipboard;

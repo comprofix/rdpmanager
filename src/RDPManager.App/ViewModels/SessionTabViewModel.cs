@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RDPManager.App.Sessions;
+using RDPManager.Core.Credentials;
 using RDPManager.Core.Sessions;
 using RoyalApps.Community.Avalonia.Windows.NativeControls;
 
@@ -68,6 +69,9 @@ public sealed partial class SessionTabViewModel : TabViewModel, IDisposeWinForms
     public event EventHandler? MinimizeRequested;
 
     public SessionOptions Options { get; }
+
+    /// <summary>Stored passwords, read when the tab opened. Empty ones leave the Windows prompt to ask.</summary>
+    public SessionSecrets Secrets { get; init; } = SessionSecrets.None;
 
     public override string Key => KeyFor(Options.ConnectionId);
 

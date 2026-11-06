@@ -235,6 +235,28 @@ public sealed class CredentialsTests : IDisposable
         Assert.Single(_credentials.Entries);
     }
 
+    [Fact]
+    public async Task Connect_PassesTheStoredPasswordsToTheSession()
+    {
+        await SetUpAsync();
+        await StorePasswordAsync(_acme.Id, "server-pw");
+
+        _main.Connect(_tree.FindItem(_dc.Id));
+
+        var session = Assert.IsType<SessionTabViewModel>(_main.SelectedTab);
+        Assert.Equal(new SessionSecrets("server-pw", "server-pw"), session.Secrets); // Gateway shares by default.
+    }
+
+    [Fact]
+    public async Task Connect_WithoutAStoredPassword_LeavesItToWindows()
+    {
+        await SetUpAsync();
+
+        _main.Connect(_tree.FindItem(_dc.Id));
+
+        Assert.Equal(SessionSecrets.None, Assert.IsType<SessionTabViewModel>(_main.SelectedTab).Secrets);
+    }
+
     /// <summary>Wraps a store so a test can make saves fail.</summary>
     private sealed class FailingStore(IConnectionStore inner) : IConnectionStore
     {

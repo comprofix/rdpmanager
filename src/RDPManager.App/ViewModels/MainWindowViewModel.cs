@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RDPManager.App.Services;
+using RDPManager.Core.Credentials;
 using RDPManager.Core.Model;
 using RDPManager.Core.Sessions;
 using RDPManager.Core.Settings;
@@ -111,7 +112,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var session = new SessionTabViewModel(options, _startTimer, CloseSession, OpenSettingsFor);
+        // A missing password leaves the Windows prompt to ask (DESIGN: Credentials).
+        var secrets = SessionSecrets.None;
+        try
+        {
+            secrets = Tree.Credentials.ForSession(Tree.Model, connection, options.GatewaySameCredentials);
+        }
+        catch (CredentialStoreException ex)
+        {
+            _dialogs.ShowError("RDPManager", $"The stored password could not be read, so Windows will ask for it.\n\n{ex.Message}");
+        }
+
+        var session = new SessionTabViewModel(options, _startTimer, CloseSession, OpenSettingsFor) { Secrets = secrets };
         AddTab(session);
         SessionOpened?.Invoke(this, session);
     }
