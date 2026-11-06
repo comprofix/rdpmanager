@@ -4,6 +4,18 @@ All notable changes to RDPManager are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/comprofix/rdpmanager/compare/v0.1.0...v0.2.0) - 2026-11-06
+
+First published release. Version 0.1.0 was built but not published; its features, listed under 0.1.0 below, are included.
+
+### Added
+
+- An application icon, shown on the window, the taskbar, the Start menu and the installer.
+
+### Changed
+
+- The installer is now a standard Windows Installer (MSI) wizard with welcome, licence and finish pages, and lets you install for yourself or for everyone on the computer. It replaces the one-click Setup.exe, which opened RDPManager when it finished.
+
 ## [0.1.0](https://github.com/comprofix/rdpmanager/releases/tag/v0.1.0) - 2026-11-06
 
 First preview release for Windows.
