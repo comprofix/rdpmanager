@@ -2,9 +2,17 @@
 # commits. The draft is then rewritten in plain words before the release commit; see AGENTS.md (Releases).
 # Preview:  git cliff --unreleased --tag vX.Y.Z
 # Prepend:  git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
+# The header matches CHANGELOG.md's introduction, so a prepend replaces it and puts the new section below it.
+# Keep the two identical; .gitattributes keeps this file and CHANGELOG.md checked out with LF so the match works on Windows.
 
 [changelog]
-header = ""
+header = """
+# Changelog
+
+All notable changes to RDPManager are recorded here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+"""
 body = """
 {%- set repo = "https://github.com/comprofix/rdpmanager" -%}
 {% if version -%}
@@ -18,10 +26,10 @@ body = """
 {% for commit in commits -%}
 - {{ commit.message | split(pat="\n") | first | upper_first }}
 {% endfor -%}
-{% endfor %}
+{% endfor -%}
 """
 footer = ""
-trim = true
+trim = false
 
 [git]
 conventional_commits = true
