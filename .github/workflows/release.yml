@@ -1,0 +1,69 @@
+name: Release
+
+# A tag vX.Y.Z builds, tests and packages RDPManager with Velopack and uploads the installer and
+# portable zip to a DRAFT GitHub release, which the owner reviews and publishes (DESIGN: Packaging and releases).
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+env:
+  # Opt out of Avalonia's anonymous build-time telemetry (Avalonia.BuildServices).
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+  # Keep in step with the Velopack package version in src/RDPManager.App/RDPManager.App.csproj.
+  VPK_VERSION: '1.2.161'
+
+jobs:
+  release:
+    name: Package and draft release (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Read version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw "Tag '${{ github.ref_name }}' is not vX.Y.Z." }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build and test
+        shell: pwsh
+        run: ./build.ps1 -Configuration Release
+
+      - name: Publish (self-contained, win-x64)
+        shell: pwsh
+        run: dotnet publish src/RDPManager.App/RDPManager.App.csproj -c Release -r win-x64 --self-contained true -p:Version=${{ steps.version.outputs.version }} -o publish
+
+      - name: Install Velopack CLI
+        shell: pwsh
+        run: dotnet tool install -g vpk --version $env:VPK_VERSION
+
+      # Earlier releases let Velopack build delta updates; there are none before the first release.
+      - name: Download previous release
+        shell: pwsh
+        continue-on-error: true
+        run: vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package
+        shell: pwsh
+        run: >
+          vpk pack --packId RDPManager --packVersion ${{ steps.version.outputs.version }} --packDir publish
+          --mainExe RDPManager.exe --packTitle RDPManager --packAuthors "Matthew McKinnon"
+
+      - name: Upload to a draft GitHub release
+        shell: pwsh
+        run: >
+          vpk upload github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }}
+          --releaseName "RDPManager v${{ steps.version.outputs.version }}" --tag ${{ github.ref_name }}
