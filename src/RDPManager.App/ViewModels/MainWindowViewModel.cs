@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RDPManager.App.Services;
 using RDPManager.Core.Credentials;
+using RDPManager.Core.Logging;
 using RDPManager.Core.Model;
 using RDPManager.Core.Sessions;
 using RDPManager.Core.Settings;
@@ -16,6 +17,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly Func<ProgramSettingsTabViewModel> _createProgramSettingsTab;
     private readonly Func<TimeSpan, Action, IDisposable> _startTimer;
     private readonly Action _exit;
+    private readonly IAppLog _log;
+
+    /// <summary>The Messages panel; null in tests that don't need it.</summary>
+    public MessagesViewModel? Messages { get; }
 
     /// <param name="startTimer">Starts a repeating UI-thread timer (used by session auto-close).</param>
     public MainWindowViewModel(
@@ -24,8 +29,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         string storageFolder,
         Func<ProgramSettingsTabViewModel> createProgramSettingsTab,
         Func<TimeSpan, Action, IDisposable> startTimer,
-        Action exit)
+        Action exit,
+        IAppLog? log = null,
+        MessagesViewModel? messages = null)
     {
+        _log = log ?? NullLog.Instance;
+        Messages = messages;
         Tree = tree;
         _dialogs = dialogs;
         StorageFolder = storageFolder;
@@ -124,6 +133,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         var session = new SessionTabViewModel(options, _startTimer, CloseSession, OpenSettingsFor) { Secrets = secrets };
+        _log.Write(LogLevel.Info, $"Connecting to {options.Name} ({options.Host}:{options.Port}).");
+        session.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SessionTabViewModel.State))
+            {
+                LogSessionState(session);
+            }
+        };
         AddTab(session);
         SessionOpened?.Invoke(this, session);
     }
@@ -135,6 +152,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (SelectedTab is SessionTabViewModel session)
         {
             session.FullScreenCommand.Execute(null);
+        }
+    }
+
+    /// <summary>Connects and disconnects, with Microsoft's codes (DESIGN: Log file).</summary>
+    private void LogSessionState(SessionTabViewModel session)
+    {
+        var name = session.Options.Name;
+        var details = string.IsNullOrEmpty(session.Details) ? string.Empty : "\n" + session.Details;
+        switch (session.State)
+        {
+            case SessionState.Connecting:
+                _log.Write(LogLevel.Info, $"Connecting to {name} ({session.Options.Host}:{session.Options.Port}).");
+                break;
+            case SessionState.Connected:
+                _log.Write(LogLevel.Info, $"Connected to {name}.");
+                break;
+            case SessionState.Disconnected:
+                _log.Write(LogLevel.Info, $"Disconnected from {name}: {session.Message}{details}");
+                break;
+            case SessionState.Error:
+                _log.Write(LogLevel.Error, (session.EverConnected ? $"{name}: " : $"Couldn't connect to {name}: ") + session.Message + details);
+                break;
         }
     }
 

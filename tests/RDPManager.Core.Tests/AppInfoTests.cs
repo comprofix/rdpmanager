@@ -9,4 +9,10 @@ public class AppInfoTests
     {
         Assert.Equal("RDPManager", AppInfo.ProductName);
     }
+
+    [Fact]
+    public void Version_IsTheBuildVersionWithoutSourceDetails()
+    {
+        Assert.Matches(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$", AppInfo.Version);
+    }
 }

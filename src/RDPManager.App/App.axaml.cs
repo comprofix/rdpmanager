@@ -5,7 +5,9 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using RDPManager.App.Services;
 using RDPManager.App.ViewModels;
+using RDPManager.Core;
 using RDPManager.Core.Credentials;
+using RDPManager.Core.Logging;
 using RDPManager.Core.Storage;
 
 namespace RDPManager.App;
@@ -15,6 +17,13 @@ public partial class App : Application
     private const string Title = "RDPManager";
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
+
+    /// <summary>The application log, once the data folder is known.</summary>
+    public static IAppLog Log { get; private set; } = NullLog.Instance;
+
+    /// <summary>Opens a folder in File Explorer.</summary>
+    public static void OpenFolder(string path) =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
 
     /// <summary>Applies a program-settings theme value ("light", "dark" or "system").</summary>
     public static void ApplyTheme(string theme)
@@ -35,7 +44,7 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var window = new MainWindow();
-            var dialogs = new WindowsDialogService(() => window.TryGetPlatformHandle()?.Handle ?? 0);
+            var nativeDialogs = new WindowsDialogService(() => window.TryGetPlatformHandle()?.Handle ?? 0);
 
             string folder;
             try
@@ -44,10 +53,21 @@ public partial class App : Application
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
             {
-                dialogs.ShowError(Title, ex.Message);
+                nativeDialogs.ShowError(Title, ex.Message);
                 desktop.Shutdown(2);
                 return;
             }
+
+            // Log file and crash logging (DESIGN: Log file). Every error shown in a dialog is logged too.
+            var log = new FileLog(folder);
+            Log = log;
+            log.Write(LogLevel.Info, $"{AppInfo.ProductName} {AppInfo.Version} started. Data folder: {folder}");
+            var dialogs = new LoggingDialogService(nativeDialogs, log);
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+                log.Write(LogLevel.Error, $"Unhandled error (the app will close):\n{e.ExceptionObject}");
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+                log.Write(LogLevel.Error, $"Unhandled background error:\n{e.Exception}");
+            desktop.Exit += (_, _) => log.Write(LogLevel.Info, $"{AppInfo.ProductName} closed.");
 
             // Program settings: a bad settings.json is reported but does not stop the app; it is not overwritten.
             var settingsStore = new ProgramSettingsStore(folder);
@@ -103,7 +123,8 @@ public partial class App : Application
 
             // Closing the main window (which asks first) ends the app, including undocked session windows.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
-            window.DataContext = new MainWindowViewModel(tree, dialogs, folder, CreateProgramSettingsTab, StartTimer, window.Close);
+            var messages = new MessagesViewModel(log, log.Folder, action => Avalonia.Threading.Dispatcher.UIThread.Post(action), OpenFolder);
+            window.DataContext = new MainWindowViewModel(tree, dialogs, folder, CreateProgramSettingsTab, StartTimer, window.Close, log, messages);
             desktop.MainWindow = window;
         }
 

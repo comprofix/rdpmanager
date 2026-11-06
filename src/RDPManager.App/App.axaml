@@ -4,6 +4,18 @@
              RequestedThemeVariant="Default">
   <Application.Styles>
     <FluentTheme />
+    <!-- Text links (settings sources, Messages panel, status bar). -->
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource DropTargetBorder}" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource DropTargetBorder}" />
+    </Style>
   </Application.Styles>
 
   <!-- App colours, per theme. Brushes are defined here because theme-resource colours nested inside
@@ -19,6 +31,8 @@
           <SolidColorBrush x:Key="InheritedForeground" Color="#FF767676" />
           <SolidColorBrush x:Key="UnsavedBackground" Color="#FFFFF4CE" />
           <SolidColorBrush x:Key="ModifiedDot" Color="#FF0078D4" />
+          <SolidColorBrush x:Key="ErrorForeground" Color="#FFC42B1C" />
+          <SolidColorBrush x:Key="WarningForeground" Color="#FF9D5D00" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
           <SolidColorBrush x:Key="DropTargetBackground" Color="#4460CDFF" />
@@ -28,6 +42,8 @@
           <SolidColorBrush x:Key="InheritedForeground" Color="#FF9A9A9A" />
           <SolidColorBrush x:Key="UnsavedBackground" Color="#FF433519" />
           <SolidColorBrush x:Key="ModifiedDot" Color="#FF60CDFF" />
+          <SolidColorBrush x:Key="ErrorForeground" Color="#FFFF99A4" />
+          <SolidColorBrush x:Key="WarningForeground" Color="#FFFCE100" />
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
     </ResourceDictionary>

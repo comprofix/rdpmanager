@@ -45,15 +45,64 @@
       </MenuItem>
       <MenuItem Header="_View">
         <MenuItem Header="_Full screen" Command="{Binding FullScreenCommand}" />
+        <MenuItem Header="{Binding Messages.MenuText, FallbackValue=_Messages}" Command="{Binding Messages.ToggleCommand}" />
       </MenuItem>
     </Menu>
 
     <Border DockPanel.Dock="Bottom" Padding="10,3" BorderThickness="0,1,0,0"
             BorderBrush="{DynamicResource DividerBrush}">
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Grid.Column="0" Text="{Binding SessionStatus}" Opacity="0.7" />
-        <TextBlock Grid.Column="1" Text="{Binding SourceStatus}" Opacity="0.7" />
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding SessionStatus}" Opacity="0.7" VerticalAlignment="Center" />
+        <!-- DESIGN: the Messages panel does not open by itself; this link opens it. -->
+        <Button Grid.Column="1" Classes="link" Margin="0,0,16,0" Padding="0"
+                IsVisible="{Binding Messages.HasNewErrors, FallbackValue=False}"
+                Content="{Binding Messages.NewErrorsText}" Command="{Binding Messages.OpenCommand}"
+                Foreground="{DynamicResource ErrorForeground}" ToolTip.Tip="Show messages" />
+        <TextBlock Grid.Column="2" Text="{Binding SourceStatus}" Opacity="0.7" VerticalAlignment="Center" />
       </Grid>
+    </Border>
+
+    <!-- Messages panel (DESIGN: Messages panel): this run's warnings and errors. -->
+    <Border DockPanel.Dock="Bottom" Height="170" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource DividerBrush}"
+            IsVisible="{Binding Messages.IsOpen, FallbackValue=False}">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="10,4">
+          <TextBlock Grid.Column="0" Text="Messages" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="link" Content="Open log folder" Margin="0,0,14,0"
+                  Command="{Binding Messages.OpenLogFolderCommand}" ToolTip.Tip="{Binding Messages.LogFolder}" />
+          <Button Grid.Column="2" Classes="link" Content="Clear" Margin="0,0,14,0" Command="{Binding Messages.ClearCommand}" />
+          <Button Grid.Column="3" Content="✕" Padding="4,0" FontSize="11" Background="Transparent" BorderThickness="0"
+                  Command="{Binding Messages.CloseCommand}" ToolTip.Tip="Hide messages" />
+        </Grid>
+        <Panel>
+          <TextBlock Text="No warnings or errors." Opacity="0.5" Margin="10,4"
+                     IsVisible="{Binding !Messages.Rows.Count, FallbackValue=False}" />
+          <ListBox ItemsSource="{Binding Messages.Rows}" Background="Transparent">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:MessageRow">
+                <Grid ColumnDefinitions="70,70,*" ToolTip.Tip="{Binding Message}">
+                  <TextBlock Grid.Column="0" Text="{Binding Time}" Opacity="0.7" />
+                  <TextBlock Grid.Column="1" Text="{Binding Level}" FontWeight="SemiBold"
+                             Classes.error="{Binding IsError}" Classes="level" />
+                  <TextBlock Grid.Column="2" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+            <ListBox.Styles>
+              <Style Selector="TextBlock.level">
+                <Setter Property="Foreground" Value="{DynamicResource WarningForeground}" />
+              </Style>
+              <Style Selector="TextBlock.level.error">
+                <Setter Property="Foreground" Value="{DynamicResource ErrorForeground}" />
+              </Style>
+              <Style Selector="ListBoxItem">
+                <Setter Property="Padding" Value="10,2" />
+                <Setter Property="MinHeight" Value="0" />
+              </Style>
+            </ListBox.Styles>
+          </ListBox>
+        </Panel>
+      </DockPanel>
     </Border>
 
     <Grid ColumnDefinitions="260,4,*">

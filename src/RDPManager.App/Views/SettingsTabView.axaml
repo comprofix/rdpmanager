@@ -12,17 +12,6 @@
     <Style Selector="CheckBox.inherited, ComboBox.inherited">
       <Setter Property="Opacity" Value="0.6" />
     </Style>
-    <Style Selector="Button.link">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="Foreground" Value="{DynamicResource DropTargetBorder}" />
-      <Setter Property="Cursor" Value="Hand" />
-    </Style>
-    <Style Selector="Button.link:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource DropTargetBorder}" />
-    </Style>
     <Style Selector="Border.actionbar.modified">
       <Setter Property="Background" Value="{DynamicResource UnsavedBackground}" />
     </Style>
