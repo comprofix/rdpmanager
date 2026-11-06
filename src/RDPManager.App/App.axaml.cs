@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
@@ -100,7 +101,9 @@ public partial class App : Application
             static IDisposable StartTimer(TimeSpan interval, Action tick) =>
                 Avalonia.Threading.DispatcherTimer.Run(() => { tick(); return true; }, interval);
 
-            window.DataContext = new MainWindowViewModel(tree, dialogs, folder, CreateProgramSettingsTab, StartTimer, () => desktop.Shutdown());
+            // Closing the main window (which asks first) ends the app, including undocked session windows.
+            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
+            window.DataContext = new MainWindowViewModel(tree, dialogs, folder, CreateProgramSettingsTab, StartTimer, window.Close);
             desktop.MainWindow = window;
         }
 

@@ -13,6 +13,7 @@ public sealed class WindowsDialogService(Func<nint> getOwnerHandle) : IDialogSer
     private const uint MbYesNo = 0x4;
     private const uint MbIconError = 0x10;
     private const uint MbIconWarning = 0x30;
+    private const uint MbIconInformation = 0x40;
     private const uint MbDefButton2 = 0x100;
     private const int IdYes = 6;
 
@@ -41,6 +42,27 @@ public sealed class WindowsDialogService(Func<nint> getOwnerHandle) : IDialogSer
         var result = WinForms.TaskDialog.ShowDialog(getOwnerHandle(), page);
         return result == save ? SaveChoice.Save : result == discard ? SaveChoice.Discard : SaveChoice.Cancel;
     }
+
+    public bool ConfirmExit(string title, string message)
+    {
+        var exit = new WinForms.TaskDialogButton("Exit");
+        var cancel = WinForms.TaskDialogButton.Cancel;
+        var page = new WinForms.TaskDialogPage
+        {
+            Caption = title,
+            Heading = "Exit RDPManager?",
+            Text = message,
+            Icon = WinForms.TaskDialogIcon.Warning,
+            Buttons = { exit, cancel },
+            DefaultButton = cancel,
+            AllowCancel = true,
+        };
+
+        return WinForms.TaskDialog.ShowDialog(getOwnerHandle(), page) == exit;
+    }
+
+    public void ShowInfo(string title, string message) =>
+        MessageBoxW(getOwnerHandle(), message, title, MbOk | MbIconInformation);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int MessageBoxW(nint owner, string text, string caption, uint type);

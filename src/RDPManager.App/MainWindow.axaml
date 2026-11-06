@@ -21,14 +21,27 @@
     </DataTemplate>
   </Window.DataTemplates>
 
-  <!-- Layout: DESIGN.md, Agreed layout. The menu bar is completed in milestone 9. -->
+  <!-- Layout: DESIGN.md, Agreed layout; menus: DESIGN.md, Packaging and releases (Menus). -->
   <Grid x:Name="Root" DragDrop.AllowDrop="True">
   <DockPanel>
     <Menu DockPanel.Dock="Top">
       <MenuItem Header="_File">
+        <MenuItem Header="New _connection"
+                  Command="{Binding NewConnectionCommand}" CommandParameter="{Binding Tree.SelectedItem}" />
+        <MenuItem Header="New _folder"
+                  Command="{Binding NewFolderCommand}" CommandParameter="{Binding Tree.SelectedItem}" />
+        <Separator />
         <MenuItem Header="_Settings…" Command="{Binding OpenProgramSettingsCommand}" />
         <Separator />
         <MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
+      </MenuItem>
+      <MenuItem Header="_Edit">
+        <MenuItem Header="_Rename" InputGesture="F2"
+                  Command="{Binding Tree.BeginRenameCommand}" CommandParameter="{Binding Tree.SelectedItem}" />
+        <MenuItem Header="D_uplicate"
+                  Command="{Binding Tree.DuplicateCommand}" CommandParameter="{Binding Tree.SelectedItem}" />
+        <MenuItem Header="_Delete" InputGesture="Delete"
+                  Command="{Binding Tree.DeleteCommand}" CommandParameter="{Binding Tree.SelectedItem}" />
       </MenuItem>
       <MenuItem Header="_View">
         <MenuItem Header="_Full screen" Command="{Binding FullScreenCommand}" />

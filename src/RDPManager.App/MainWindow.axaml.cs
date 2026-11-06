@@ -55,6 +55,15 @@ public partial class MainWindow : Window
             }
         };
 
+        // Title bar close and File › Exit: the exit prompt (DESIGN: Editing behaviour).
+        Closing += (_, e) =>
+        {
+            if (DataContext is MainWindowViewModel main && !main.ConfirmExit())
+            {
+                e.Cancel = true;
+            }
+        };
+
         // Double-clicking a connection connects (folders expand; Avalonia does that itself).
         Tree.DoubleTapped += (_, e) =>
         {

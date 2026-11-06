@@ -22,4 +22,10 @@ public interface IDialogService
 
     /// <summary>Asks whether to save unsaved changes: Save (default), Discard or Cancel.</summary>
     SaveChoice AskSaveChanges(string title, string message);
+
+    /// <summary>Asks whether to exit: Exit or Cancel (default). Returns true for Exit.</summary>
+    bool ConfirmExit(string title, string message);
+
+    /// <summary>Shows information with an OK button.</summary>
+    void ShowInfo(string title, string message);
 }

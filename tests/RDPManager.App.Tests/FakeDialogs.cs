@@ -30,4 +30,19 @@ internal sealed class FakeDialogs : IDialogService
         SavePrompts.Add(message);
         return SaveAnswer;
     }
+
+    /// <summary>Answer to "Exit RDPManager?".</summary>
+    public bool ExitAnswer { get; set; }
+
+    public List<string> ExitPrompts { get; } = [];
+
+    public List<string> Infos { get; } = [];
+
+    public bool ConfirmExit(string title, string message)
+    {
+        ExitPrompts.Add(message);
+        return ExitAnswer;
+    }
+
+    public void ShowInfo(string title, string message) => Infos.Add(message);
 }

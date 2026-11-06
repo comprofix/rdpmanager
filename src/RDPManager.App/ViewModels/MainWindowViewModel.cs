@@ -220,8 +220,47 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    /// <summary>File › Exit: closes the main window, which asks <see cref="ConfirmExit"/> first.</summary>
     [RelayCommand]
     private void Exit() => _exit();
+
+    /// <summary>
+    /// Called when the main window is about to close (DESIGN: Editing behaviour, Exit prompt). Asks only when
+    /// something would be lost: settings tabs with unsaved changes, or sessions that would disconnect.
+    /// Returns true when the app may close; open sessions are then disconnected.
+    /// </summary>
+    public bool ConfirmExit()
+    {
+        var unsaved = Tabs.Where(t => !t.IsSession && t.IsModified).Select(t => t.Title).ToList();
+        var sessions = Tabs.OfType<SessionTabViewModel>().Where(s => s.IsConnected || s.IsConnecting).ToList();
+        if (unsaved.Count > 0 || sessions.Count > 0)
+        {
+            var parts = new List<string>();
+            if (unsaved.Count > 0)
+            {
+                parts.Add("These tabs have unsaved changes, which will be lost:\n" + string.Join("\n", unsaved.Select(t => "  • " + t)));
+            }
+
+            if (sessions.Count > 0)
+            {
+                parts.Add(sessions.Count == 1
+                    ? "1 open session will be disconnected."
+                    : $"{sessions.Count} open sessions will be disconnected.");
+            }
+
+            if (!_dialogs.ConfirmExit("RDPManager", string.Join("\n\n", parts)))
+            {
+                return false;
+            }
+        }
+
+        foreach (var session in sessions)
+        {
+            _ = session.PrepareToCloseAsync(); // Disconnects; completes at once.
+        }
+
+        return true;
+    }
 
     private void OpenNew(NodeType type, TreeItemViewModel? item)
     {
