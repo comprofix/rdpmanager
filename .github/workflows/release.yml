@@ -1,11 +1,19 @@
 name: Release
 
-# A tag vX.Y.Z builds, tests and packages RDPManager with Velopack and uploads the installer and
-# portable zip to a DRAFT GitHub release, which the owner reviews and publishes (DESIGN: Packaging and releases).
+# A tag vX.Y.Z builds, tests and packages RDPManager with Velopack (Setup.exe, MSI and portable zip) and uploads
+# them to a DRAFT GitHub release, which the owner reviews and publishes (DESIGN: Packaging and releases).
+# Run it by hand (Actions > Release > Run workflow) to package a test build: the files are kept as a workflow
+# artifact and no release is created or changed.
 on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for the test package (X.Y.Z)'
+        required: true
+        default: '0.1.1'
 
 permissions:
   contents: write
@@ -30,16 +38,19 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Read version from tag
+      - name: Read version
         id: version
         shell: pwsh
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          $version = '${{ github.ref_name }}'.TrimStart('v')
-          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw "Tag '${{ github.ref_name }}' is not vX.Y.Z." }
+          $version = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { $env:INPUT_VERSION.Trim() } else { '${{ github.ref_name }}'.TrimStart('v') }
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw "'$version' is not X.Y.Z." }
           "version=$version" >> $env:GITHUB_OUTPUT
 
       # The release notes are this version's CHANGELOG.md section (see AGENTS.md, Releases); no section, no release.
       - name: Release notes from CHANGELOG.md
+        if: github.event_name == 'push'
         shell: pwsh
         run: |
           $version = '${{ steps.version.outputs.version }}'
@@ -55,6 +66,11 @@ jobs:
           $footer = (Get-Content .github/release-footer.md -Raw).Trim()
           $changelog = "Full history: [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md)"
           Set-Content -Path release-body.md -Value "$section`n`n$footer`n`n$changelog" -Encoding utf8
+
+      - name: Placeholder notes for a test package
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: Set-Content -Path notes.md -Value 'Test package; not a release.' -Encoding utf8
 
       - name: Build and test
         shell: pwsh
@@ -74,19 +90,33 @@ jobs:
         continue-on-error: true
         run: vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }}
 
+      # The MSI wizard shows the welcome, MIT licence and conclusion pages. The licence is copied to a .txt name
+      # because the documented licence formats are .txt, .md and .rtf.
       - name: Package
         shell: pwsh
-        run: >
-          vpk pack --packId RDPManager --packVersion ${{ steps.version.outputs.version }} --packDir publish
-          --mainExe RDPManager.exe --packTitle RDPManager --packAuthors "Matthew McKinnon" --releaseNotes notes.md
+        run: |
+          Copy-Item LICENSE installer/license.txt
+          vpk pack --packId RDPManager --packVersion ${{ steps.version.outputs.version }} --packDir publish `
+          --mainExe RDPManager.exe --packTitle RDPManager --packAuthors "Matthew McKinnon" --releaseNotes notes.md `
+          --msi --instLocation Either --instWelcome installer/welcome.md --instLicense installer/license.txt --instConclusion installer/conclusion.md
+
+      - name: Keep the test package as a workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: RDPManager-${{ steps.version.outputs.version }}-test
+          path: Releases
+          retention-days: 7
 
       - name: Upload to a draft GitHub release
+        if: github.event_name == 'push'
         shell: pwsh
         run: >
           vpk upload github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }}
           --releaseName "RDPManager v${{ steps.version.outputs.version }}" --tag ${{ github.ref_name }}
 
       - name: Set the release text
+        if: github.event_name == 'push'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
