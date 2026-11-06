@@ -1,4 +1,5 @@
 using RDPManager.App.ViewModels;
+using RDPManager.Core.Credentials;
 using RDPManager.Core.Model;
 using RDPManager.Core.Sessions;
 using RDPManager.Core.Storage;
@@ -9,6 +10,7 @@ public sealed class SessionTabTests : IDisposable
 {
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "RDPManager.Tests", Guid.NewGuid().ToString("N"));
     private readonly FakeDialogs _dialogs = new();
+    private readonly InMemoryCredentialStore _credentials = new();
     private readonly List<ManualTimer> _timers = [];
     private ConnectionTreeViewModel _tree = null!;
     private MainWindowViewModel _main = null!;
@@ -32,7 +34,7 @@ public sealed class SessionTabTests : IDisposable
         _noHost = new ConnectionNode { Name = "no-host" };
         await store.SaveNodeAsync(_dc);
         await store.SaveNodeAsync(_noHost);
-        _tree = new ConnectionTreeViewModel(store, _dialogs, "Personal");
+        _tree = new ConnectionTreeViewModel(store, new CredentialService(_credentials), _dialogs, "Personal");
         _tree.SetTree(await store.LoadAsync());
         _main = new MainWindowViewModel(
             _tree,

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RDPManager.App.Services;
+using RDPManager.Core.Credentials;
 using RDPManager.Core.Model;
 using RDPManager.Core.Settings;
 using RDPManager.Core.Storage;
@@ -12,7 +13,7 @@ namespace RDPManager.App.ViewModels;
 /// The connection tree: shows one source's folders and connections and applies tree operations
 /// (rename, duplicate, delete, move) immediately through the store (DESIGN: tree operations are immediate).
 /// </summary>
-public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDialogService dialogs, string sourceName) : ObservableObject
+public sealed partial class ConnectionTreeViewModel(IConnectionStore store, CredentialService credentials, IDialogService dialogs, string sourceName) : ObservableObject
 {
     private const string Title = "RDPManager";
 
@@ -37,6 +38,9 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
 
     /// <summary>The loaded tree; settings drafts resolve inherited values against it.</summary>
     public ConnectionTree Model => _tree;
+
+    /// <summary>Stored passwords (Windows Credential Manager in the app).</summary>
+    public CredentialService Credentials { get; } = credentials ?? throw new ArgumentNullException(nameof(credentials));
 
     /// <summary>Shows a tree that has already been loaded from the store.</summary>
     public void SetTree(ConnectionTree tree)
@@ -82,10 +86,29 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
         }
 
         var renamed = existing is not null && existing.Name != node.Name;
+
+        // Passwords go to the credential store before the marker is saved; undone if the file save fails.
+        SecretChange? secrets = null;
+        if (draft.PendingSecrets.Count > 0)
+        {
+            try
+            {
+                secrets = Credentials.Begin(node.Id, node.Name, draft.PendingSecrets);
+            }
+            catch (CredentialStoreException ex)
+            {
+                dialogs.ShowError(Title, $"The password could not be stored, so nothing was saved.\n\n{ex.Message}");
+                return false;
+            }
+        }
+
         if (!await TrySaveAsync(() => store.SaveNodeAsync(node, draft.IsNew ? draft.Parent?.Id : null)))
         {
+            ReportCredentialFailures(secrets?.Rollback(), "could not be put back as they were");
             return false;
         }
+
+        ReportCredentialFailures(secrets?.Commit(), "could not be removed");
 
         if (draft.IsNew && draft.Parent is { } parent && FindItem(parent.Id) is { } parentItem)
         {
@@ -162,10 +185,28 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
             return;
         }
 
-        var copy = _tree.CreateDuplicate(node.Id);
+        var idMap = new Dictionary<string, string>();
+        var copy = _tree.CreateDuplicate(node.Id, idMap);
+
+        // The copy gets its own copy of the stored passwords (DESIGN: Credentials, Windows details).
+        SecretChange secrets;
+        try
+        {
+            secrets = Credentials.CopyTo(_tree, copy, idMap);
+        }
+        catch (CredentialStoreException ex)
+        {
+            dialogs.ShowError(Title, $"The stored passwords could not be copied, so nothing was duplicated.\n\n{ex.Message}");
+            return;
+        }
+
         if (await TrySaveAsync(() => store.SaveNodeAsync(copy, node.Parent?.Id)))
         {
             Rebuild(selectId: copy.Id);
+        }
+        else
+        {
+            ReportCredentialFailures(secrets.Rollback(), "could not be removed");
         }
     }
 
@@ -189,6 +230,19 @@ public sealed partial class ConnectionTreeViewModel(IConnectionStore store, IDia
         {
             Rebuild(selectId: selectAfter);
             NodesDeleted?.Invoke(this, removedIds);
+            ReportCredentialFailures(Credentials.DeleteFor(removedIds), "could not be removed");
+        }
+    }
+
+    /// <summary>Tells the user about Credential Manager entries that were left behind.</summary>
+    private void ReportCredentialFailures(IReadOnlyList<string>? targets, string what)
+    {
+        if (targets is { Count: > 0 })
+        {
+            dialogs.ShowError(
+                Title,
+                $"These Windows Credential Manager entries {what}:\n\n{string.Join("\n", targets)}\n\n" +
+                "You can check them in Control Panel › Credential Manager › Windows Credentials.");
         }
     }
 

@@ -102,6 +102,37 @@ public sealed partial class SettingFieldViewModel : ObservableObject
         }
     }
 
+    private string _password = string.Empty;
+
+    /// <summary>
+    /// A newly typed password for password fields. Stored passwords are never read back into the field;
+    /// it stays empty and shows <see cref="PasswordPlaceholder"/>. Clearing it drops the typed password.
+    /// </summary>
+    public string Password
+    {
+        get => _password;
+        set
+        {
+            if (SetProperty(ref _password, value ?? string.Empty) && !_updating)
+            {
+                if (_password.Length == 0)
+                {
+                    _owner.Draft.ClearPendingSecret(Key);
+                }
+                else
+                {
+                    _owner.Draft.SetSecret(Key, _password);
+                }
+
+                _owner.OnFieldChanged();
+            }
+        }
+    }
+
+    /// <summary>"●●●●●●●●" when a password is stored (here or inherited), otherwise a hint.</summary>
+    [ObservableProperty]
+    private string _passwordPlaceholder = string.Empty;
+
     /// <summary>True when the value is not set on this item (shown greyed).</summary>
     [ObservableProperty]
     private bool _isInherited;
@@ -141,17 +172,14 @@ public sealed partial class SettingFieldViewModel : ObservableObject
         _updating = true;
         try
         {
-            if (IsSecret)
-            {
-                IsInherited = false;
-                SourceText = "Available when credentials are added (milestone 8)";
-                HasSourceLink = false;
-                CanReset = false;
-                return;
-            }
-
             var resolved = _owner.Draft.Get(Key);
             var setHere = _owner.Draft.IsSetHere(Key);
+
+            if (IsSecret)
+            {
+                RefreshSecret(resolved, setHere);
+                return;
+            }
             var value = resolved.Value as JsonValue;
 
             switch (Definition.Type)
@@ -180,6 +208,43 @@ public sealed partial class SettingFieldViewModel : ObservableObject
         finally
         {
             _updating = false;
+        }
+    }
+
+    /// <summary>Password fields (DESIGN: Credentials, Windows details).</summary>
+    private void RefreshSecret(ResolvedSetting resolved, bool setHere)
+    {
+        var pending = _owner.Draft.PendingSecrets.TryGetValue(Key, out var p) ? p : null;
+        Password = pending ?? string.Empty;
+        var stored = resolved.Value is JsonValue v && v.TryGetValue<bool>(out var b) && b;
+
+        IsInherited = !setHere;
+        CanReset = setHere;
+        _sourceNodeId = !setHere && stored && resolved.Source == SettingSource.Ancestor ? resolved.SourceNode?.Id : null;
+        HasSourceLink = _sourceNodeId is not null;
+        PasswordPlaceholder = stored && pending is null ? "●●●●●●●●" : "Not stored: Windows will ask";
+
+        if (pending is not null)
+        {
+            SourceText = "Stored in Credential Manager on Save";
+        }
+        else if (setHere)
+        {
+            var users = _owner.Draft.CountConnectionsUsing(Key);
+            SourceText = users switch
+            {
+                0 => "Stored in Credential Manager",
+                1 => "Stored in Credential Manager · used by 1 connection",
+                _ => $"Stored in Credential Manager · used by {users} connections",
+            };
+        }
+        else if (HasSourceLink)
+        {
+            SourceText = $"Inherited from {resolved.SourceNode?.Name}";
+        }
+        else
+        {
+            SourceText = _owner.Draft.PendingSecrets.ContainsKey(Key) ? "Removed on Save" : "Not stored";
         }
     }
 

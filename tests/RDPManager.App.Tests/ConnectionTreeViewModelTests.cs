@@ -1,5 +1,6 @@
 using RDPManager.App.Services;
 using RDPManager.App.ViewModels;
+using RDPManager.Core.Credentials;
 using RDPManager.Core.Model;
 using RDPManager.Core.Storage;
 
@@ -9,6 +10,7 @@ public sealed class ConnectionTreeViewModelTests : IDisposable
 {
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "RDPManager.Tests", Guid.NewGuid().ToString("N"));
     private readonly FakeDialogs _dialogs = new();
+    private readonly InMemoryCredentialStore _credentials = new();
     private JsonFileStore _store = null!;
     private ConnectionTreeViewModel _vm = null!;
     private FolderNode _clients = null!;
@@ -37,7 +39,7 @@ public sealed class ConnectionTreeViewModelTests : IDisposable
         await _store.SaveNodeAsync(_dc, _acme.Id);
         await _store.SaveNodeAsync(_fs, _acme.Id);
 
-        _vm = new ConnectionTreeViewModel(_store, _dialogs, "Personal");
+        _vm = new ConnectionTreeViewModel(_store, new CredentialService(_credentials), _dialogs, "Personal");
         _vm.SetTree(await _store.LoadAsync());
     }
 

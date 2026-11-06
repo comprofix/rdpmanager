@@ -67,7 +67,9 @@
                   <ComboBox Grid.Column="1" IsVisible="{Binding IsChoice}" ItemsSource="{Binding Choices}"
                             SelectedItem="{Binding SelectedChoice, Mode=TwoWay}" HorizontalAlignment="Stretch"
                             Classes.inherited="{Binding IsInherited}" />
-                  <TextBox Grid.Column="1" IsVisible="{Binding IsSecret}" IsEnabled="False" PasswordChar="●" />
+                  <TextBox Grid.Column="1" IsVisible="{Binding IsSecret}" PasswordChar="●" RevealPassword="False"
+                           Text="{Binding Password, Mode=TwoWay}" PlaceholderText="{Binding PasswordPlaceholder}"
+                           Classes.inherited="{Binding IsInherited}" />
 
                   <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" Margin="12,0,0,0" VerticalAlignment="Center">
                     <Button Classes="link" IsVisible="{Binding HasSourceLink}" Content="{Binding SourceText}"

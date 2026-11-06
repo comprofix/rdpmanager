@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using RDPManager.App.Services;
 using RDPManager.App.ViewModels;
+using RDPManager.Core.Credentials;
 using RDPManager.Core.Storage;
 
 namespace RDPManager.App;
@@ -64,7 +65,7 @@ public partial class App : Application
             ApplyTheme(settings.Theme);
 
             var store = new JsonFileStore(folder);
-            var tree = new ConnectionTreeViewModel(store, dialogs, "Personal");
+            var tree = new ConnectionTreeViewModel(store, new CredentialService(new WindowsCredentialStore()), dialogs, "Personal");
             try
             {
                 // Load off the UI thread so the store's awaits cannot deadlock on it.

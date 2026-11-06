@@ -1,5 +1,6 @@
 using RDPManager.App.Services;
 using RDPManager.App.ViewModels;
+using RDPManager.Core.Credentials;
 using RDPManager.Core.Model;
 using RDPManager.Core.Storage;
 
@@ -9,6 +10,7 @@ public sealed class SettingsTabsTests : IDisposable
 {
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "RDPManager.Tests", Guid.NewGuid().ToString("N"));
     private readonly FakeDialogs _dialogs = new();
+    private readonly InMemoryCredentialStore _credentials = new();
     private readonly List<string> _appliedThemes = [];
     private JsonFileStore _store = null!;
     private ConnectionTreeViewModel _tree = null!;
@@ -35,7 +37,7 @@ public sealed class SettingsTabsTests : IDisposable
         await _store.SaveNodeAsync(_acme);
         await _store.SaveNodeAsync(_dc, _acme.Id);
 
-        _tree = new ConnectionTreeViewModel(_store, _dialogs, "Personal");
+        _tree = new ConnectionTreeViewModel(_store, new CredentialService(_credentials), _dialogs, "Personal");
         _tree.SetTree(await _store.LoadAsync());
         var settingsStore = new ProgramSettingsStore(_folder);
         _main = new MainWindowViewModel(
@@ -298,17 +300,6 @@ public sealed class SettingsTabsTests : IDisposable
         await _tree.DeleteAsync(_tree.FindItem(_acme.Id));
         Assert.DoesNotContain(folderTab, _main.Tabs);
         Assert.DoesNotContain(dcTab, _main.Tabs);
-    }
-
-    [Fact]
-    public async Task Secrets_AreShownDisabledUntilCredentialsArrive()
-    {
-        await SetUpAsync();
-        var password = Field(OpenSettings(_dc.Id), "password");
-
-        Assert.True(password.IsSecret);
-        Assert.False(password.CanReset);
-        Assert.Contains("milestone 8", password.SourceText);
     }
 
     [Fact]
