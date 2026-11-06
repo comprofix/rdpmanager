@@ -333,4 +333,62 @@ public sealed class SettingsTabsTests : IDisposable
         Assert.Empty(_appliedThemes);
         Assert.False(File.Exists(Path.Combine(_folder, ProgramSettingsStore.FileName)));
     }
+
+    [Fact]
+    public async Task GatewayCredentials_AreGreyedOutWhileSameCredentialsIsTicked()
+    {
+        await SetUpAsync();
+        var tab = OpenSettings(_dc.Id);
+        var same = Field(tab, "gateway.sameCredentials");
+        string[] keys = ["gateway.username", "gateway.domain", "gateway.password"];
+
+        Assert.True(same.IsChecked); // The default.
+        foreach (var key in keys)
+        {
+            var field = Field(tab, key);
+            Assert.False(field.IsEditable);
+            Assert.Equal("Uses the connection's credentials", field.SourceText);
+            Assert.False(field.CanReset);
+            Assert.False(field.HasSourceLink);
+        }
+
+        Assert.True(same.IsEditable);
+        Assert.True(Field(tab, "gateway.host").IsEditable);
+
+        same.IsChecked = false;
+        Assert.All(keys, key => Assert.True(Field(tab, key).IsEditable));
+    }
+
+    [Fact]
+    public async Task GatewayCredentials_FollowAnInheritedSameCredentials()
+    {
+        await SetUpAsync();
+        var folderTab = OpenSettings(_acme.Id);
+        Field(folderTab, "gateway.sameCredentials").IsChecked = false;
+        await folderTab.SaveAsync();
+
+        var tab = OpenSettings(_dc.Id);
+        Assert.True(Field(tab, "gateway.username").IsEditable);
+
+        Field(tab, "gateway.sameCredentials").IsChecked = true;
+        Assert.False(Field(tab, "gateway.username").IsEditable);
+    }
+
+    [Fact]
+    public async Task GatewayCredentials_AreKeptWhenSameCredentialsIsTicked()
+    {
+        await SetUpAsync();
+        var tab = OpenSettings(_dc.Id);
+        Field(tab, "gateway.sameCredentials").IsChecked = false;
+        Field(tab, "gateway.username").Text = "gw-user";
+        await tab.SaveAsync();
+
+        Field(tab, "gateway.sameCredentials").IsChecked = true;
+        await tab.SaveAsync();
+
+        var saved = (await ReloadAsync()).Find(_dc.Id)!;
+        Assert.Equal("gw-user", saved.Settings["gateway.username"]!.GetValue<string>());
+        Assert.Equal("gw-user", Field(tab, "gateway.username").Text);
+        Assert.False(Field(tab, "gateway.username").IsEditable);
+    }
 }

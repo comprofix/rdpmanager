@@ -166,8 +166,31 @@ public sealed partial class SettingFieldViewModel : ObservableObject
         }
     }
 
+    /// <summary>The gateway credential fields, which are not used while the gateway shares the connection's credentials.</summary>
+    private static readonly HashSet<string> GatewayCredentialKeys = ["gateway.username", "gateway.domain", "gateway.password"];
+
+    /// <summary>False when the field can't be edited (gateway credentials while "same credentials" is ticked).</summary>
+    [ObservableProperty]
+    private bool _isEditable = true;
+
     /// <summary>Reloads the shown value and source from the draft.</summary>
     public void Refresh()
+    {
+        RefreshValue();
+
+        // Values entered earlier are kept; they are used again if "same credentials" is unticked.
+        IsEditable = !(GatewayCredentialKeys.Contains(Key)
+            && _owner.Draft.Get("gateway.sameCredentials").Value is JsonValue same
+            && same.TryGetValue<bool>(out var shared) && shared);
+        if (!IsEditable)
+        {
+            SourceText = "Uses the connection's credentials";
+            HasSourceLink = false;
+            CanReset = false;
+        }
+    }
+
+    private void RefreshValue()
     {
         _updating = true;
         try

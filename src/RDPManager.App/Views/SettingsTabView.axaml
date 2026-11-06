@@ -60,14 +60,14 @@
                 <Grid ColumnDefinitions="220,300,*" Margin="0,4">
                   <TextBlock Grid.Column="0" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" />
 
-                  <TextBox Grid.Column="1" IsVisible="{Binding IsTextLike}" Text="{Binding Text, Mode=TwoWay}"
+                  <TextBox Grid.Column="1" IsVisible="{Binding IsTextLike}" IsEnabled="{Binding IsEditable}" Text="{Binding Text, Mode=TwoWay}"
                            Classes.inherited="{Binding IsInherited}" />
-                  <CheckBox Grid.Column="1" IsVisible="{Binding IsBoolean}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                  <CheckBox Grid.Column="1" IsVisible="{Binding IsBoolean}" IsEnabled="{Binding IsEditable}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
                             Classes.inherited="{Binding IsInherited}" />
-                  <ComboBox Grid.Column="1" IsVisible="{Binding IsChoice}" ItemsSource="{Binding Choices}"
+                  <ComboBox Grid.Column="1" IsVisible="{Binding IsChoice}" IsEnabled="{Binding IsEditable}" ItemsSource="{Binding Choices}"
                             SelectedItem="{Binding SelectedChoice, Mode=TwoWay}" HorizontalAlignment="Stretch"
                             Classes.inherited="{Binding IsInherited}" />
-                  <TextBox Grid.Column="1" IsVisible="{Binding IsSecret}" PasswordChar="●" RevealPassword="False"
+                  <TextBox Grid.Column="1" IsVisible="{Binding IsSecret}" IsEnabled="{Binding IsEditable}" PasswordChar="●" RevealPassword="False"
                            Text="{Binding Password, Mode=TwoWay}" PlaceholderText="{Binding PasswordPlaceholder}"
                            Classes.inherited="{Binding IsInherited}" />
 
