@@ -1,0 +1,41 @@
+# git-cliff configuration: drafts a CHANGELOG.md section (Keep a Changelog headings) from conventional
+# commits. The draft is then rewritten in plain words before the release commit; see AGENTS.md (Releases).
+# Preview:  git cliff --unreleased --tag vX.Y.Z
+# Prepend:  git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md
+
+[changelog]
+header = ""
+body = """
+{%- set repo = "https://github.com/comprofix/rdpmanager" -%}
+{% if version -%}
+## [{{ version | trim_start_matches(pat="v") }}]({% if previous.version %}{{ repo }}/compare/{{ previous.version }}...{{ version }}{% else %}{{ repo }}/releases/tag/{{ version }}{% endif %}) - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else -%}
+## [Unreleased]
+{% endif -%}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+
+{% for commit in commits -%}
+- {{ commit.message | split(pat="\n") | first | upper_first }}
+{% endfor -%}
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = true
+filter_commits = false
+tag_pattern = "v[0-9]+\\.[0-9]+\\.[0-9]+.*"
+sort_commits = "oldest"
+commit_parsers = [
+  { message = "^chore\\(release\\)", skip = true },
+  { message = "^feat", group = "<!-- 0 -->Added" },
+  { message = "^perf", group = "<!-- 1 -->Changed" },
+  { message = "^revert", group = "<!-- 2 -->Removed" },
+  { message = "^fix", group = "<!-- 3 -->Fixed" },
+  { message = "^(docs|style|refactor|test|build|ci|chore)", skip = true },
+]
