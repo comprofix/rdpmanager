@@ -91,19 +91,18 @@ jobs:
         run: vpk download github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }}
 
       # The installer is the MSI (owner, 2026-11-06): a standard wizard with welcome, MIT licence and conclusion
-      # pages and a per-user or per-machine choice. --noInst drops Velopack's one-click Setup.exe. The licence is
+      # pages and a per-user or per-machine choice. Velopack still builds its one-click Setup.exe (--noInst also drops
+      # the MSI, found 2026-11-06), so Setup.exe is left out of the artifact and deleted from the release. The licence is
       # copied to a .txt name because the documented licence formats are .txt, .md and .rtf.
       - name: Package
         shell: pwsh
         run: |
           Copy-Item LICENSE installer/license.txt
-          vpk pack --packId RDPManager --packVersion ${{ steps.version.outputs.version }} --packDir publish `
+          vpk pack --runtime win-x64 --packId RDPManager --packVersion ${{ steps.version.outputs.version }} --packDir publish `
           --mainExe RDPManager.exe --packTitle RDPManager --packAuthors "Matthew McKinnon" --releaseNotes notes.md `
           --icon src/RDPManager.App/Assets/rdpmanager.ico `
-          --msi --instLocation Either --instWelcome installer/welcome.md --instLicense installer/license.txt --instConclusion installer/conclusion.md `
-          --noInst
+          --msi --instLocation Either --instWelcome installer/welcome.md --instLicense installer/license.txt --instConclusion installer/conclusion.md
           if (-not (Get-ChildItem Releases -Filter *.msi)) { throw 'No MSI was produced.' }
-          if (Get-ChildItem Releases -Filter *-Setup.exe) { throw 'Setup.exe was produced although --noInst was set.' }
           Get-ChildItem Releases | ForEach-Object { "{0}  {1:N0} bytes" -f $_.Name, $_.Length }
 
       - name: Keep the test package as a workflow artifact
@@ -111,7 +110,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: RDPManager-${{ steps.version.outputs.version }}-test
-          path: Releases
+          path: |
+            Releases
+            !Releases/*-Setup.exe
           retention-days: 7
 
       - name: Upload to a draft GitHub release
@@ -133,4 +134,10 @@ jobs:
           if (-not $release) { throw 'The draft release for ${{ github.ref_name }} was not found.' }
           $body = @{ body = (Get-Content release-body.md -Raw) } | ConvertTo-Json
           Invoke-RestMethod -Method Patch -Uri "$api/$($release.id)" -Headers $headers -Body $body -ContentType 'application/json' | Out-Null
+          # The MSI is the only installer (owner, 2026-11-06): remove Velopack's one-click Setup.exe from the release.
+          $setups = @($release.assets) | Where-Object { $_.name -like '*-Setup.exe' }
+          foreach ($asset in $setups) {
+            Invoke-RestMethod -Method Delete -Uri "$api/assets/$($asset.id)" -Headers $headers | Out-Null
+            "Removed $($asset.name) from the release."
+          }
           "Release text set on $($release.html_url) (draft: $($release.draft))."
