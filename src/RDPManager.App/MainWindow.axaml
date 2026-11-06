@@ -47,6 +47,13 @@
         <MenuItem Header="_Full screen" Command="{Binding FullScreenCommand}" />
         <MenuItem Header="{Binding Messages.MenuText, FallbackValue=_Messages}" Command="{Binding Messages.ToggleCommand}" />
       </MenuItem>
+      <MenuItem Header="_Help">
+        <MenuItem Header="_Check for updates" Command="{Binding CheckForUpdatesCommand}" />
+        <MenuItem Header="Open _log folder" Command="{Binding Messages.OpenLogFolderCommand}" />
+        <MenuItem Header="RDPManager on _GitHub" Command="{Binding OpenRepositoryCommand}" />
+        <Separator />
+        <MenuItem Header="_About RDPManager" Command="{Binding AboutCommand}" />
+      </MenuItem>
     </Menu>
 
     <Border DockPanel.Dock="Bottom" Padding="10,3" BorderThickness="0,1,0,0"

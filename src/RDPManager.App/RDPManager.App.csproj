@@ -21,6 +21,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="RoyalApps.Community.Avalonia.Windows" Version="1.4.0" />
     <PackageReference Include="RoyalApps.Community.Rdp.WinForms" Version="2.0.9" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
   <ItemGroup>

@@ -24,6 +24,13 @@ public sealed class ProgramSettings
     [JsonPropertyName("theme")]
     public string Theme { get; set; } = Themes.System;
 
+    /// <summary>
+    /// Check GitHub for a newer version when RDPManager starts. Off by default: RDPManager makes no network
+    /// request unless the user asks for one (DESIGN: Milestone 9 decisions).
+    /// </summary>
+    [JsonPropertyName("checkForUpdatesAtStart")]
+    public bool CheckForUpdatesAtStart { get; set; }
+
     /// <summary>Properties this version does not recognise; written back unchanged.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? UnknownProperties { get; set; }
@@ -32,6 +39,7 @@ public sealed class ProgramSettings
     {
         SchemaVersion = SchemaVersion,
         Theme = Theme,
+        CheckForUpdatesAtStart = CheckForUpdatesAtStart,
         UnknownProperties = UnknownProperties is null ? null : new(UnknownProperties),
     };
 }

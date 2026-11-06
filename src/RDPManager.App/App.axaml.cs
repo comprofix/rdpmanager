@@ -21,6 +21,10 @@ public partial class App : Application
     /// <summary>The application log, once the data folder is known.</summary>
     public static IAppLog Log { get; private set; } = NullLog.Instance;
 
+    /// <summary>Opens a web page in the default browser.</summary>
+    public static void OpenUrl(string url) =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+
     /// <summary>Opens a folder in File Explorer.</summary>
     public static void OpenFolder(string path) =>
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
@@ -49,7 +53,7 @@ public partial class App : Application
             string folder;
             try
             {
-                folder = StorageLocation.Resolve(desktop.Args ?? []);
+                folder = StorageLocation.Resolve(desktop.Args ?? [], VelopackUpdateService.PortableDataFolder());
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
             {
@@ -124,7 +128,12 @@ public partial class App : Application
             // Closing the main window (which asks first) ends the app, including undocked session windows.
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             var messages = new MessagesViewModel(log, log.Folder, action => Avalonia.Threading.Dispatcher.UIThread.Post(action), OpenFolder);
-            window.DataContext = new MainWindowViewModel(tree, dialogs, folder, CreateProgramSettingsTab, StartTimer, window.Close, log, messages);
+            var main = new MainWindowViewModel(tree, dialogs, folder, CreateProgramSettingsTab, StartTimer, window.Close, log, messages, new VelopackUpdateService(), OpenUrl);
+            window.DataContext = main;
+            if (settings.CheckForUpdatesAtStart)
+            {
+                window.Opened += async (_, _) => await main.CheckForUpdatesAtStartAsync();
+            }
             desktop.MainWindow = window;
         }
 

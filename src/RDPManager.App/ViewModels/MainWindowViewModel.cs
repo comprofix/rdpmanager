@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RDPManager.App.Services;
+using RDPManager.Core;
 using RDPManager.Core.Credentials;
 using RDPManager.Core.Logging;
 using RDPManager.Core.Model;
@@ -18,6 +19,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly Func<TimeSpan, Action, IDisposable> _startTimer;
     private readonly Action _exit;
     private readonly IAppLog _log;
+    private readonly IUpdateService? _updates;
+    private readonly Action<string> _openUrl;
+
+    public const string RepositoryUrl = VelopackUpdateService.RepositoryUrl;
 
     /// <summary>The Messages panel; null in tests that don't need it.</summary>
     public MessagesViewModel? Messages { get; }
@@ -31,9 +36,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Func<TimeSpan, Action, IDisposable> startTimer,
         Action exit,
         IAppLog? log = null,
-        MessagesViewModel? messages = null)
+        MessagesViewModel? messages = null,
+        IUpdateService? updates = null,
+        Action<string>? openUrl = null)
     {
         _log = log ?? NullLog.Instance;
+        _updates = updates;
+        _openUrl = openUrl ?? (_ => { });
         Messages = messages;
         Tree = tree;
         _dialogs = dialogs;
@@ -256,6 +265,105 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 SessionClosed?.Invoke(this, session);
                 session.Release();
             }
+        }
+    }
+
+    /// <summary>Help › Check for updates.</summary>
+    [RelayCommand]
+    public Task CheckForUpdatesAsync() => CheckForUpdatesCoreAsync(quiet: false);
+
+    /// <summary>
+    /// The start-up check (only when "Check for updates when RDPManager starts" is on). Quiet: it says
+    /// something only when a newer version exists; problems go to the log.
+    /// </summary>
+    public Task CheckForUpdatesAtStartAsync() => CheckForUpdatesCoreAsync(quiet: true);
+
+    /// <summary>Help › About.</summary>
+    [RelayCommand]
+    private void About() => _dialogs.ShowInfo(
+        "About RDPManager",
+        $"{AppInfo.ProductName} {AppInfo.Version}\nA remote connection manager.\n\n" +
+        $"Copyright © Matthew McKinnon. Released under the MIT licence.\n\n{RepositoryUrl}\n\n" +
+        $"Data folder: {StorageFolder}");
+
+    /// <summary>Help › RDPManager on GitHub.</summary>
+    [RelayCommand]
+    private void OpenRepository() => _openUrl(RepositoryUrl);
+
+    private async Task CheckForUpdatesCoreAsync(bool quiet)
+    {
+        const string title = "RDPManager updates";
+        if (_updates is not { CanUpdate: true })
+        {
+            if (!quiet)
+            {
+                _dialogs.ShowInfo(title, $"This copy of RDPManager ({AppInfo.Version}) wasn't installed with the RDPManager installer or portable zip, so it can't update itself.\n\nDownloads: {RepositoryUrl}/releases");
+            }
+
+            return;
+        }
+
+        string? version;
+        try
+        {
+            version = await _updates.CheckAsync();
+        }
+        catch (Exception ex)
+        {
+            if (quiet)
+            {
+                _log.Write(LogLevel.Warning, $"Couldn't check for updates: {ex.Message}");
+            }
+            else
+            {
+                _dialogs.ShowError(title, $"Couldn't check for updates.\n\n{ex.Message}");
+            }
+
+            return;
+        }
+
+        _log.Write(LogLevel.Info, version is null ? $"Checked for updates: {AppInfo.Version} is the latest." : $"Checked for updates: {version} is available.");
+        if (version is null)
+        {
+            if (!quiet)
+            {
+                _dialogs.ShowInfo(title, $"You have the latest version ({AppInfo.Version}).");
+            }
+
+            return;
+        }
+
+        var unsaved = Tabs.Where(t => !t.IsSession && t.IsModified).ToList();
+        var sessions = Tabs.OfType<SessionTabViewModel>().Where(s => s.IsConnected || s.IsConnecting).ToList();
+        var warning = string.Empty;
+        if (unsaved.Count > 0)
+        {
+            warning += $"\n\nUnsaved changes in {unsaved.Count} settings tab(s) will be lost.";
+        }
+
+        if (sessions.Count > 0)
+        {
+            warning += sessions.Count == 1 ? "\n\n1 open session will be disconnected." : $"\n\n{sessions.Count} open sessions will be disconnected.";
+        }
+
+        if (!_dialogs.Confirm(title, $"RDPManager {version} is available. You have {AppInfo.Version}.\n\nDownload it and restart RDPManager now?{warning}"))
+        {
+            return;
+        }
+
+        foreach (var session in sessions)
+        {
+            _ = session.PrepareToCloseAsync(); // Disconnects; completes at once.
+        }
+
+        try
+        {
+            _log.Write(LogLevel.Info, $"Updating to {version}.");
+            await _updates.DownloadAndRestartAsync();
+        }
+        catch (Exception ex)
+        {
+            _dialogs.ShowError(title, $"The update couldn't be downloaded or applied.\n\n{ex.Message}");
         }
     }
 

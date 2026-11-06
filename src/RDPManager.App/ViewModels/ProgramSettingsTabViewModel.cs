@@ -6,7 +6,7 @@ using RDPManager.Core.Storage;
 namespace RDPManager.App.ViewModels;
 
 /// <summary>
-/// The "Program settings" tab (File › Settings…): Appearance › Theme. Like every settings tab, changes
+/// The "Program settings" tab (File › Settings…): Appearance › Theme and Updates. Like every settings tab, changes
 /// apply only when saved (DESIGN: Editing behaviour, owner decision 2026-11-05).
 /// </summary>
 public sealed partial class ProgramSettingsTabViewModel : TabViewModel
@@ -30,6 +30,7 @@ public sealed partial class ProgramSettingsTabViewModel : TabViewModel
         _canSave = canSave;
         Title = "Program settings";
         _selectedTheme = Themes.First(t => t.Value == _saved.Theme);
+        _checkForUpdatesAtStart = _saved.CheckForUpdatesAtStart;
         Refresh();
     }
 
@@ -51,7 +52,23 @@ public sealed partial class ProgramSettingsTabViewModel : TabViewModel
     /// <summary>The settings as last saved.</summary>
     public ProgramSettings Saved => _saved;
 
+    /// <summary>Updates › "Check for updates when RDPManager starts" (off by default).</summary>
+    [ObservableProperty]
+    private bool _checkForUpdatesAtStart;
+
+    /// <summary>The page shown: 0 Appearance, 1 Updates.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowAppearance))]
+    [NotifyPropertyChangedFor(nameof(ShowUpdates))]
+    private int _selectedPage;
+
+    public bool ShowAppearance => SelectedPage == 0;
+
+    public bool ShowUpdates => SelectedPage == 1;
+
     partial void OnSelectedThemeChanged(ChoiceOption value) => Refresh();
+
+    partial void OnCheckForUpdatesAtStartChanged(bool value) => Refresh();
 
     [RelayCommand(CanExecute = nameof(IsModified))]
     public async Task SaveAsync() => await TrySaveAsync();
@@ -66,6 +83,7 @@ public sealed partial class ProgramSettingsTabViewModel : TabViewModel
                 break;
             case SaveChoice.Discard:
                 SelectedTheme = Themes.First(t => t.Value == _saved.Theme);
+                CheckForUpdatesAtStart = _saved.CheckForUpdatesAtStart;
                 break;
         }
     }
@@ -95,6 +113,7 @@ public sealed partial class ProgramSettingsTabViewModel : TabViewModel
 
         var updated = _saved.Clone();
         updated.Theme = SelectedTheme.Value;
+        updated.CheckForUpdatesAtStart = CheckForUpdatesAtStart;
         try
         {
             await _store.SaveAsync(updated);
@@ -113,7 +132,7 @@ public sealed partial class ProgramSettingsTabViewModel : TabViewModel
 
     private void Refresh()
     {
-        IsModified = SelectedTheme.Value != _saved.Theme;
+        IsModified = SelectedTheme.Value != _saved.Theme || CheckForUpdatesAtStart != _saved.CheckForUpdatesAtStart;
         StatusText = IsModified ? "Unsaved changes" : "No unsaved changes";
         SaveCommand.NotifyCanExecuteChanged();
         CancelCommand.NotifyCanExecuteChanged();

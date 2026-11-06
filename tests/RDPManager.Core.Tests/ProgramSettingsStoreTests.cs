@@ -29,7 +29,18 @@ public sealed class ProgramSettingsStoreTests : IDisposable
         var settings = await new ProgramSettingsStore(_folder).LoadAsync();
 
         Assert.Equal(ProgramSettings.Themes.System, settings.Theme);
+        Assert.False(settings.CheckForUpdatesAtStart); // No network request unless asked.
         Assert.False(Directory.Exists(_folder));
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesAtStart_RoundTrips()
+    {
+        var store = new ProgramSettingsStore(_folder);
+        await store.SaveAsync(new ProgramSettings { CheckForUpdatesAtStart = true });
+
+        Assert.True((await store.LoadAsync()).CheckForUpdatesAtStart);
+        Assert.True(JsonNode.Parse(File.ReadAllText(FilePath))!["checkForUpdatesAtStart"]!.GetValue<bool>());
     }
 
     [Fact]

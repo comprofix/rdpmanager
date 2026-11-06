@@ -51,4 +51,16 @@ public class StorageLocationTests
     {
         Assert.True(Path.IsPathFullyQualified(Resolve(["--config", "relative-folder"], null)));
     }
+
+    [Fact]
+    public void PortableFolder_IsUsedBeforeAppData_ButCommandLineAndEnvironmentStillWin()
+    {
+        var portable = Path.Combine(Root, "portable", "Data");
+        string Resolve(string[] args, string? env) =>
+            StorageLocation.Resolve(args, name => name == StorageLocation.EnvironmentVariable ? env : null, () => AppData, portable);
+
+        Assert.Equal(portable, Resolve([], null));
+        Assert.Equal(FromEnv, Resolve([], FromEnv));
+        Assert.Equal(FromArgs, Resolve(["--config", FromArgs], null));
+    }
 }

@@ -3,7 +3,8 @@ namespace RDPManager.Core.Storage;
 /// <summary>
 /// Where RDPManager keeps its files: <c>--config &lt;folder&gt;</c> (or <c>--config=&lt;folder&gt;</c>) on the
 /// command line, otherwise the <c>RDPMANAGER_CONFIG</c> environment variable, otherwise the per-user
-/// application data folder plus <c>RDPManager</c> (<c>%APPDATA%\RDPManager</c> on Windows).
+/// application data folder plus <c>RDPManager</c> (<c>%APPDATA%\RDPManager</c> on Windows). A portable copy
+/// passes its own <c>Data</c> folder, which is used before the application data folder.
 /// </summary>
 public static class StorageLocation
 {
@@ -11,14 +12,19 @@ public static class StorageLocation
     public const string EnvironmentVariable = "RDPMANAGER_CONFIG";
 
     /// <summary>Resolves the folder for this process.</summary>
-    public static string Resolve(IReadOnlyList<string> args) =>
+    public static string Resolve(IReadOnlyList<string> args, string? portableFolder = null) =>
         Resolve(
             args,
             Environment.GetEnvironmentVariable,
-            () => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+            () => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            portableFolder);
 
     /// <summary>Resolves the folder from explicit inputs (used by tests).</summary>
-    public static string Resolve(IReadOnlyList<string> args, Func<string, string?> getEnvironmentVariable, Func<string> getAppDataFolder)
+    public static string Resolve(
+        IReadOnlyList<string> args,
+        Func<string, string?> getEnvironmentVariable,
+        Func<string> getAppDataFolder,
+        string? portableFolder = null)
     {
         ArgumentNullException.ThrowIfNull(args);
 
@@ -32,6 +38,11 @@ public static class StorageLocation
         if (!string.IsNullOrWhiteSpace(fromEnvironment))
         {
             return Path.GetFullPath(fromEnvironment.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(portableFolder))
+        {
+            return Path.GetFullPath(portableFolder);
         }
 
         var appData = getAppDataFolder();
