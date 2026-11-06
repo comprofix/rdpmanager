@@ -40,7 +40,17 @@ public partial class SessionView : UserControl
             _session.PropertyChanged -= OnSessionChanged;
         }
 
+        var previous = _session;
         _session = DataContext as SessionTabViewModel;
+
+        // The tab control reuses this view when switching between session tabs. The host shows the
+        // control of the session it was created for, so build a new one for the new session; the
+        // previous session's control stays alive in the hosting library until its tab closes.
+        if (!ReferenceEquals(previous, _session))
+        {
+            HostSlot.Child = null;
+        }
+
         if (_session is not null)
         {
             _session.PropertyChanged += OnSessionChanged;
