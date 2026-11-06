@@ -63,7 +63,44 @@ public sealed class NodeDraft
     }
 
     /// <summary>True when the draft differs from what was last saved (always true for a new node).</summary>
-    public bool IsDirty => IsNew || Name != _savedName || !JsonNode.DeepEquals(_shadow.Settings, _savedSettings);
+    public bool IsDirty => IsNew || Name != _savedName || _pendingSecrets.Count > 0 || !JsonNode.DeepEquals(_shadow.Settings, _savedSettings);
+
+    private readonly Dictionary<string, string?> _pendingSecrets = [];
+
+    /// <summary>
+    /// Password changes waiting for Save, by setting key: a new password, or null to remove the stored one.
+    /// They go to the credential store, never to the connection file (DESIGN: Credentials).
+    /// </summary>
+    public IReadOnlyDictionary<string, string?> PendingSecrets => _pendingSecrets;
+
+    /// <summary>Sets a new password on this node (stored on Save).</summary>
+    public void SetSecret(string key, string secret)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(secret);
+        var definition = SecretDefinition(key);
+        _pendingSecrets[key] = secret;
+        _shadow.Settings[definition.StorageKey] = true;
+    }
+
+    /// <summary>Drops a typed but unsaved password, so the saved state applies again.</summary>
+    public void ClearPendingSecret(string key)
+    {
+        var definition = SecretDefinition(key);
+        if (_pendingSecrets.TryGetValue(key, out var pending) && pending is null)
+        {
+            return; // A removal stays until Reset is undone by Cancel/Discard.
+        }
+
+        _pendingSecrets.Remove(key);
+        if (_savedSettings.ContainsKey(definition.StorageKey))
+        {
+            _shadow.Settings[definition.StorageKey] = true;
+        }
+        else
+        {
+            _shadow.Settings.Remove(definition.StorageKey);
+        }
+    }
 
     /// <summary>The settings that apply to this node's type, in schema order.</summary>
     public IEnumerable<SettingDefinition> Definitions => SettingsSchema.All.Where(d => d.AppliesTo(Type));
@@ -73,7 +110,7 @@ public sealed class NodeDraft
     /// <summary>True when the value is set on this node rather than inherited.</summary>
     public bool IsSetHere(string key) => _shadow.Settings.ContainsKey(SettingsSchema.Get(key).StorageKey);
 
-    /// <summary>Sets (overrides) a value on this node. Secrets cannot be set here.</summary>
+    /// <summary>Sets (overrides) a value on this node. Passwords use <see cref="SetSecret"/>.</summary>
     public void Set(string key, JsonNode? value)
     {
         var definition = SettingsSchema.Get(key);
@@ -90,8 +127,39 @@ public sealed class NodeDraft
         _shadow.Settings[definition.StorageKey] = value?.DeepClone();
     }
 
-    /// <summary>Removes this node's value, so it is inherited again.</summary>
-    public void Reset(string key) => _shadow.Settings.Remove(SettingsSchema.Get(key).StorageKey);
+    /// <summary>Removes this node's value, so it is inherited again. For a password, the stored one is removed on Save.</summary>
+    public void Reset(string key)
+    {
+        var definition = SettingsSchema.Get(key);
+        _shadow.Settings.Remove(definition.StorageKey);
+        if (definition.Type == SettingType.Secret)
+        {
+            if (_savedSettings.ContainsKey(definition.StorageKey))
+            {
+                _pendingSecrets[key] = null;
+            }
+            else
+            {
+                _pendingSecrets.Remove(key);
+            }
+        }
+    }
+
+    private SettingDefinition SecretDefinition(string key)
+    {
+        var definition = SettingsSchema.Get(key);
+        if (definition.Type != SettingType.Secret)
+        {
+            throw new InvalidOperationException($"'{key}' is not a password setting.");
+        }
+
+        if (!definition.AppliesTo(Type))
+        {
+            throw new InvalidOperationException($"'{key}' does not apply to a {Type}.");
+        }
+
+        return definition;
+    }
 
     /// <summary>Problems that stop the draft being saved; empty when it can be saved.</summary>
     public IReadOnlyList<string> Validate()
@@ -145,11 +213,13 @@ public sealed class NodeDraft
         _shadow.Name = _shadow.Name.Trim();
         _savedName = _shadow.Name;
         _savedSettings = (JsonObject)_shadow.Settings.DeepClone();
+        _pendingSecrets.Clear();
     }
 
     /// <summary>Throws away unsaved changes.</summary>
     public void Revert()
     {
+        _pendingSecrets.Clear();
         _shadow.Name = _savedName;
         _shadow.Settings = (JsonObject)_savedSettings.DeepClone();
     }

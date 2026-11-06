@@ -102,11 +102,71 @@ public class NodeDraftTests
     }
 
     [Fact]
-    public void Secrets_CannotBeSetInTheDraft()
+    public void Secrets_CannotBeSetAsOrdinaryValues()
     {
         var draft = NodeDraft.ForExisting(_tree, _dc);
 
         Assert.Throws<InvalidOperationException>(() => draft.Set("password", true));
+        Assert.Throws<InvalidOperationException>(() => draft.SetSecret("username", "x"));
+    }
+
+    [Fact]
+    public void SetSecret_SetsTheMarkerAndWaitsForSave()
+    {
+        var draft = NodeDraft.ForExisting(_tree, _dc);
+
+        draft.SetSecret("password", "P@ss");
+
+        Assert.True(draft.IsDirty);
+        Assert.True(draft.IsSetHere("password"));
+        Assert.Equal("P@ss", draft.PendingSecrets["password"]);
+        Assert.True(draft.ToNode().Settings["passwordStored"]!.GetValue<bool>());
+
+        draft.MarkSaved();
+        Assert.Empty(draft.PendingSecrets);
+        Assert.False(draft.IsDirty);
+    }
+
+    [Fact]
+    public void ClearingATypedPassword_ReturnsToTheSavedState()
+    {
+        var draft = NodeDraft.ForExisting(_tree, _dc);
+        draft.SetSecret("password", "P@ss");
+
+        draft.ClearPendingSecret("password");
+
+        Assert.False(draft.IsDirty);
+        Assert.False(draft.IsSetHere("password"));
+    }
+
+    [Fact]
+    public void ResetOfAStoredPassword_IsARemovalOnSave()
+    {
+        _dc.Settings["passwordStored"] = true;
+        var draft = NodeDraft.ForExisting(_tree, _dc);
+
+        draft.Reset("password");
+
+        Assert.True(draft.IsDirty);
+        Assert.False(draft.IsSetHere("password"));
+        Assert.True(draft.PendingSecrets.ContainsKey("password"));
+        Assert.Null(draft.PendingSecrets["password"]);
+
+        draft.Revert();
+        Assert.Empty(draft.PendingSecrets);
+        Assert.True(draft.IsSetHere("password"));
+    }
+
+    [Fact]
+    public void ResetOfAnUnsavedPassword_JustDropsIt()
+    {
+        var draft = NodeDraft.ForExisting(_tree, _dc);
+        draft.SetSecret("gateway.password", "gw");
+
+        draft.Reset("gateway.password");
+
+        Assert.Empty(draft.PendingSecrets);
+        Assert.False(draft.IsDirty);
     }
 
     [Fact]

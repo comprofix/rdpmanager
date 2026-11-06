@@ -47,7 +47,8 @@ public enum PerformancePreset
 /// <summary>
 /// Everything a session needs to connect, resolved from the connection's settings (node, its folders,
 /// file defaults, built-in defaults). Platform-neutral: the Windows RDP control and, later, FreeRDP map from it.
-/// Passwords are not included; they come from the credential store (milestone 8) or the control's own prompt.
+/// Passwords are not included; they come from the credential store (<see cref="Credentials.SessionSecrets"/>)
+/// or the control's own prompt.
 /// </summary>
 public sealed record SessionOptions
 {

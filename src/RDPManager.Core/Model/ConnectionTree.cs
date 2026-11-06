@@ -117,12 +117,13 @@ public sealed class ConnectionTree
     /// <summary>
     /// Creates a copy of a node (and, for a folder, everything inside it) with new ids, named
     /// "&lt;name&gt; (copy)". It is not added to the tree. Password markers are not copied, because
-    /// stored passwords belong to the original node.
+    /// stored passwords belong to the original node; <paramref name="idMap"/> (original id → copy id) lets the
+    /// caller copy them (see <c>CredentialService.CopyTo</c>).
     /// </summary>
-    public TreeNode CreateDuplicate(string id)
+    public TreeNode CreateDuplicate(string id, IDictionary<string, string>? idMap = null)
     {
         var original = Find(id) ?? throw new KeyNotFoundException($"No node with id '{id}'.");
-        var copy = Copy(original);
+        var copy = Copy(original, idMap);
         copy.Name = $"{original.Name} (copy)";
         return copy;
     }
@@ -187,9 +188,10 @@ public sealed class ConnectionTree
         return ReferenceEquals(destination, dragged.Parent) ? null : new DropPlacement(destination?.Id);
     }
 
-    private static TreeNode Copy(TreeNode original)
+    private static TreeNode Copy(TreeNode original, IDictionary<string, string>? idMap)
     {
         TreeNode copy = original is FolderNode ? new FolderNode() : new ConnectionNode();
+        idMap?.Add(original.Id, copy.Id);
         copy.Name = original.Name;
         copy.Settings = (JsonObject)original.Settings.DeepClone();
         foreach (var secret in Settings.SettingsSchema.All.Where(d => d.Type == Settings.SettingType.Secret))
@@ -203,7 +205,7 @@ public sealed class ConnectionTree
         {
             foreach (var child in folder.Children)
             {
-                var childCopy = Copy(child);
+                var childCopy = Copy(child, idMap);
                 folderCopy.InsertChild(SortedIndex(folderCopy.Children, childCopy), childCopy);
             }
         }

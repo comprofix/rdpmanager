@@ -131,6 +131,19 @@ public class ConnectionTreeTests
     }
 
     [Fact]
+    public void CreateDuplicate_ReportsTheOriginalToCopyIds()
+    {
+        var (tree, _, acme, dc) = Sample();
+        var map = new Dictionary<string, string>();
+
+        var copy = Assert.IsType<FolderNode>(tree.CreateDuplicate(acme.Id, map));
+
+        Assert.Equal(2, map.Count);
+        Assert.Equal(copy.Id, map[acme.Id]);
+        Assert.Equal(Assert.Single(copy.Children).Id, map[dc.Id]);
+    }
+
+    [Fact]
     public void CountContents_CountsAtAnyDepth()
     {
         var (tree, clients, acme, _) = Sample();
