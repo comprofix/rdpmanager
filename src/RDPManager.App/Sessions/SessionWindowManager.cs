@@ -63,6 +63,7 @@ public sealed class SessionWindowManager(Window owner)
         var window = new Window
         {
             Title = $"{session.Title} - RDPManager",
+            Icon = owner.Icon,
             Width = 1024,
             Height = 768,
             Content = new SessionView { Placement = SessionLocation.Window, DataContext = session },
@@ -94,6 +95,7 @@ public sealed class SessionWindowManager(Window owner)
         var window = new Window
         {
             Title = $"{session.Title} - RDPManager",
+            Icon = owner.Icon,
             WindowStartupLocation = WindowStartupLocation.Manual,
             Position = bounds.Position,
             WindowDecorations = Avalonia.Controls.WindowDecorations.None,

@@ -8,11 +8,17 @@
     <AssemblyName>RDPManager</AssemblyName>
     <RootNamespace>RDPManager.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The app icon (Assets/rdpmanager.svg is its source): .exe, window title bars and the installer. -->
+    <ApplicationIcon>Assets/rdpmanager.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- WFO0003 asks for DPI to be set through Windows Forms. This is an Avalonia app that only hosts
          Windows Forms controls, so DPI awareness (Per-Monitor V2) stays in app.manifest. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/rdpmanager.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.5" />

@@ -5,6 +5,7 @@
         x:Class="RDPManager.App.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="RDPManager"
+        Icon="avares://RDPManager/Assets/rdpmanager.ico"
         Width="1200" Height="760"
         MinWidth="640" MinHeight="400"
         WindowStartupLocation="CenterScreen">
