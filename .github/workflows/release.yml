@@ -38,6 +38,24 @@ jobs:
           if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw "Tag '${{ github.ref_name }}' is not vX.Y.Z." }
           "version=$version" >> $env:GITHUB_OUTPUT
 
+      # The release notes are this version's CHANGELOG.md section (see AGENTS.md, Releases); no section, no release.
+      - name: Release notes from CHANGELOG.md
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $lines = Get-Content CHANGELOG.md
+          $start = [array]::FindIndex([string[]]$lines, [Predicate[string]] { param($l) $l.StartsWith("## [$version](") })
+          if ($start -lt 0) { throw "CHANGELOG.md has no '## [$version](...) - YYYY-MM-DD' section." }
+          if ($lines[$start] -notmatch ' - \d{4}-\d{2}-\d{2}$') { throw "The CHANGELOG.md heading for $version has no date: $($lines[$start])" }
+          $end = $lines.Count
+          for ($i = $start + 1; $i -lt $lines.Count; $i++) { if ($lines[$i].StartsWith('## [')) { $end = $i; break } }
+          $section = ($lines[($start + 1)..($end - 1)] -join "`n").Trim()
+          if (-not $section) { throw "The CHANGELOG.md section for $version is empty." }
+          Set-Content -Path notes.md -Value $section -Encoding utf8
+          $footer = (Get-Content .github/release-footer.md -Raw).Trim()
+          $changelog = "Full history: [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md)"
+          Set-Content -Path release-body.md -Value "$section`n`n$footer`n`n$changelog" -Encoding utf8
+
       - name: Build and test
         shell: pwsh
         run: ./build.ps1 -Configuration Release
@@ -60,10 +78,23 @@ jobs:
         shell: pwsh
         run: >
           vpk pack --packId RDPManager --packVersion ${{ steps.version.outputs.version }} --packDir publish
-          --mainExe RDPManager.exe --packTitle RDPManager --packAuthors "Matthew McKinnon"
+          --mainExe RDPManager.exe --packTitle RDPManager --packAuthors "Matthew McKinnon" --releaseNotes notes.md
 
       - name: Upload to a draft GitHub release
         shell: pwsh
         run: >
           vpk upload github --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }}
           --releaseName "RDPManager v${{ steps.version.outputs.version }}" --tag ${{ github.ref_name }}
+
+      - name: Set the release text
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
+          $api = 'https://api.github.com/repos/${{ github.repository }}/releases'
+          $release = Invoke-RestMethod -Uri "${api}?per_page=30" -Headers $headers | Where-Object { $_.tag_name -eq '${{ github.ref_name }}' } | Select-Object -First 1
+          if (-not $release) { throw 'The draft release for ${{ github.ref_name }} was not found.' }
+          $body = @{ body = (Get-Content release-body.md -Raw) } | ConvertTo-Json
+          Invoke-RestMethod -Method Patch -Uri "$api/$($release.id)" -Headers $headers -Body $body -ContentType 'application/json' | Out-Null
+          "Release text set on $($release.html_url) (draft: $($release.draft))."
