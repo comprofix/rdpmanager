@@ -99,6 +99,7 @@ jobs:
           Copy-Item LICENSE installer/license.txt
           vpk pack --packId RDPManager --packVersion ${{ steps.version.outputs.version }} --packDir publish `
           --mainExe RDPManager.exe --packTitle RDPManager --packAuthors "Matthew McKinnon" --releaseNotes notes.md `
+          --icon src/RDPManager.App/Assets/rdpmanager.ico `
           --msi --instLocation Either --instWelcome installer/welcome.md --instLicense installer/license.txt --instConclusion installer/conclusion.md `
           --noInst
           if (-not (Get-ChildItem Releases -Filter *.msi)) { throw 'No MSI was produced.' }
